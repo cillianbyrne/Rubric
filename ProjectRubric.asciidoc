@@ -1,0 +1,3034 @@
+
+
++*In[ ]:*+
+[source, ipython3]
+----
+#pip install pyportfolioopt
+----
+
+
++*In[3]:*+
+[source, ipython3]
+----
+#import all necessary tools
+
+import pandas as pd
+from pypfopt import EfficientFrontier
+from pypfopt import risk_models
+from pypfopt import expected_returns
+import numpy as np
+import datetime
+from datetime import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
+import random
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+----
+
+
++*In[4]:*+
+[source, ipython3]
+----
+#read the CSV file 'stock_prices'. This contains daily prices for 20 stocks between 1989 and 2018
+#set the date column as the index
+#look at the data and check for NA's
+
+df_stocks = pd.read_csv(r"C:\Users\Cillian\PyPortfolioOpt\tests\resources\stock_prices.csv", parse_dates=True, index_col="date")
+print(df_stocks.head(50))
+print(df_stocks.tail(10))
+print(df_stocks.isna().sum())
+----
+
+
++*Out[4]:*+
+----
+            GOOG      AAPL  FB  BABA  AMZN        GE     AMD       WMT  \
+date                                                                     
+1989-12-29   NaN  0.117203 NaN   NaN   NaN  0.352438  3.9375  3.486070   
+1990-01-02   NaN  0.123853 NaN   NaN   NaN  0.364733  4.1250  3.660858   
+1990-01-03   NaN  0.124684 NaN   NaN   NaN  0.364050  4.0000  3.660858   
+1990-01-04   NaN  0.125100 NaN   NaN   NaN  0.362001  3.9375  3.641439   
+1990-01-05   NaN  0.125516 NaN   NaN   NaN  0.358586  3.8125  3.602595   
+1990-01-08   NaN  0.126347 NaN   NaN   NaN  0.360635  3.8125  3.651146   
+1990-01-09   NaN  0.125100 NaN   NaN   NaN  0.353122  3.8750  3.554040   
+1990-01-10   NaN  0.119697 NaN   NaN   NaN  0.353805  3.8125  3.554040   
+1990-01-11   NaN  0.114710 NaN   NaN   NaN  0.353805  3.8750  3.592883   
+1990-01-12   NaN  0.114710 NaN   NaN   NaN  0.344925  3.7500  3.456938   
+1990-01-15   NaN  0.113878 NaN   NaN   NaN  0.342193  3.6250  3.408385   
+1990-01-16   NaN  0.115957 NaN   NaN   NaN  0.345608  3.9375  3.466648   
+1990-01-17   NaN  0.110554 NaN   NaN   NaN  0.344242  3.8125  3.427804   
+1990-01-18   NaN  0.107644 NaN   NaN   NaN  0.347657  3.8125  3.369543   
+1990-01-19   NaN  0.113878 NaN   NaN   NaN  0.354488  3.7500  3.379253   
+1990-01-22   NaN  0.110554 NaN   NaN   NaN  0.343559  3.7500  3.291859   
+1990-01-23   NaN  0.112216 NaN   NaN   NaN  0.342876  3.6875  3.291859   
+1990-01-24   NaN  0.113047 NaN   NaN   NaN  0.345608  3.8125  3.311280   
+1990-01-25   NaN  0.113463 NaN   NaN   NaN  0.338778  3.8125  3.253019   
+1990-01-26   NaN  0.108891 NaN   NaN   NaN  0.341510  3.6875  3.272438   
+1990-01-29   NaN  0.110554 NaN   NaN   NaN  0.337412  3.6875  3.291859   
+1990-01-30   NaN  0.113047 NaN   NaN   NaN  0.337412  3.6250  3.262727   
+1990-01-31   NaN  0.113047 NaN   NaN   NaN  0.340144  3.6250  3.311280   
+1990-02-01   NaN  0.111800 NaN   NaN   NaN  0.337412  3.6250  3.272438   
+1990-02-02   NaN  0.113878 NaN   NaN   NaN  0.337412  3.5000  3.262727   
+1990-02-05   NaN  0.116372 NaN   NaN   NaN  0.337412  3.5625  3.243307   
+1990-02-06   NaN  0.115541 NaN   NaN   NaN  0.338778  3.5000  3.233596   
+1990-02-07   NaN  0.110554 NaN   NaN   NaN  0.342193  3.6875  3.320990   
+1990-02-08   NaN  0.109722 NaN   NaN   NaN  0.344242  3.6875  3.301569   
+1990-02-09   NaN  0.113878 NaN   NaN   NaN  0.345608  3.6250  3.388964   
+1990-02-12   NaN  0.113047 NaN   NaN   NaN  0.340144  3.5000  3.330701   
+1990-02-13   NaN  0.114710 NaN   NaN   NaN  0.339461  3.5625  3.340413   
+1990-02-14   NaN  0.113878 NaN   NaN   NaN  0.340144  3.5625  3.340413   
+1990-02-15   NaN  0.113878 NaN   NaN   NaN  0.342193  3.5625  3.379253   
+1990-02-16   NaN  0.123304 NaN   NaN   NaN  0.338778  3.6250  3.330701   
+1990-02-20   NaN  0.122391 NaN   NaN   NaN  0.332631  3.5625  3.243307   
+1990-02-21   NaN  0.124218 NaN   NaN   NaN  0.330582  3.7500  3.233596   
+1990-02-22   NaN  0.120564 NaN   NaN   NaN  0.331948  3.8750  3.185043   
+1990-02-23   NaN  0.121478 NaN   NaN   NaN  0.330582  3.8750  3.155911   
+1990-02-26   NaN  0.124218 NaN   NaN   NaN  0.334680  4.0625  3.253019   
+1990-02-27   NaN  0.122391 NaN   NaN   NaN  0.338778  4.3125  3.359831   
+1990-02-28   NaN  0.124218 NaN   NaN   NaN  0.371114  4.1250  3.418094   
+1990-03-01   NaN  0.125131 NaN   NaN   NaN  0.370363  4.3750  3.466648   
+1990-03-02   NaN  0.123304 NaN   NaN   NaN  0.374870  4.5000  3.505490   
+1990-03-05   NaN  0.126044 NaN   NaN   NaN  0.371114  4.6250  3.486070   
+1990-03-06   NaN  0.128785 NaN   NaN   NaN  0.374870  4.5625  3.554040   
+1990-03-07   NaN  0.129241 NaN   NaN   NaN  0.376373  4.5000  3.515199   
+1990-03-08   NaN  0.134265 NaN   NaN   NaN  0.378626  4.5000  3.583174   
+1990-03-09   NaN  0.134721 NaN   NaN   NaN  0.376373  4.5000  3.583174   
+1990-03-12   NaN  0.133808 NaN   NaN   NaN  0.374870  4.4375  3.612306   
+
+                 BAC  GM         T  UAA  SHLD       XOM  RRC       BBY  MA  \
+date                                                                         
+1989-12-29  1.752478 NaN  2.365775  NaN   NaN  1.766756  NaN  0.166287 NaN   
+1990-01-02  1.766686 NaN  2.398184  NaN   NaN  1.766756  NaN  0.173216 NaN   
+1990-01-03  1.780897 NaN  2.356516  NaN   NaN  1.749088  NaN  0.194001 NaN   
+1990-01-04  1.743005 NaN  2.403821  NaN   NaN  1.731422  NaN  0.190537 NaN   
+1990-01-05  1.705114 NaN  2.287973  NaN   NaN  1.722587  NaN  0.190537 NaN   
+1990-01-08  1.714586 NaN  2.326588  NaN   NaN  1.749088  NaN  0.176680 NaN   
+1990-01-09  1.714586 NaN  2.273493  NaN   NaN  1.713754  NaN  0.176680 NaN   
+1990-01-10  1.681432 NaN  2.210742  NaN   NaN  1.722587  NaN  0.173216 NaN   
+1990-01-11  1.667222 NaN  2.230050  NaN   NaN  1.731422  NaN  0.169751 NaN   
+1990-01-12  1.619857 NaN  2.162473  NaN   NaN  1.687252  NaN  0.166287 NaN   
+1990-01-15  1.572494 NaN  2.128685  NaN   NaN  1.709336  NaN  0.169751 NaN   
+1990-01-16  1.629331 NaN  2.172127  NaN   NaN  1.700503  NaN  0.173216 NaN   
+1990-01-17  1.638804 NaN  2.114204  NaN   NaN  1.674001  NaN  0.173216 NaN   
+1990-01-18  1.615122 NaN  2.152819  NaN   NaN  1.696086  NaN  0.169751 NaN   
+1990-01-19  1.676695 NaN  2.162473  NaN   NaN  1.718172  NaN  0.180144 NaN   
+1990-01-22  1.648276 NaN  2.099723  NaN   NaN  1.660751  NaN  0.176680 NaN   
+1990-01-23  1.681432 NaN  2.114204  NaN   NaN  1.665167  NaN  0.194001 NaN   
+1990-01-24  1.662487 NaN  2.128685  NaN   NaN  1.660751  NaN  0.190537 NaN   
+1990-01-25  1.657749 NaN  2.061107  NaN   NaN  1.625416  NaN  0.194001 NaN   
+1990-01-26  1.629331 NaN  2.041800  NaN   NaN  1.651917  NaN  0.190537 NaN   
+1990-01-29  1.610385 NaN  2.036972  NaN   NaN  1.660751  NaN  0.190537 NaN   
+1990-01-30  1.548811 NaN  2.017665  NaN   NaN  1.660751  NaN  0.187073 NaN   
+1990-01-31  1.591439 NaN  2.041800  NaN   NaN  1.660751  NaN  0.190537 NaN   
+1990-02-01  1.567757 NaN  2.075588  NaN   NaN  1.660751  NaN  0.197466 NaN   
+1990-02-02  1.624595 NaN  2.099723  NaN   NaN  1.691669  NaN  0.197466 NaN   
+1990-02-05  1.591439 NaN  2.128685  NaN   NaN  1.696086  NaN  0.204394 NaN   
+1990-02-06  1.572494 NaN  2.070761  NaN   NaN  1.757457  NaN  0.204394 NaN   
+1990-02-07  1.600912 NaN  2.085241  NaN   NaN  1.785354  NaN  0.200930 NaN   
+1990-02-08  1.581967 NaN  2.008010  NaN   NaN  1.790003  NaN  0.214787 NaN   
+1990-02-09  1.596175 NaN  2.046625  NaN   NaN  1.794653  NaN  0.214787 NaN   
+1990-02-12  1.596175 NaN  2.027319  NaN   NaN  1.752808  NaN  0.211323 NaN   
+1990-02-13  1.591439 NaN  2.046625  NaN   NaN  1.757457  NaN  0.204394 NaN   
+1990-02-14  1.615122 NaN  2.056280  NaN   NaN  1.748158  NaN  0.211323 NaN   
+1990-02-15  1.657749 NaN  2.104549  NaN   NaN  1.803951  NaN  0.207859 NaN   
+1990-02-16  1.695641 NaN  2.094896  NaN   NaN  1.785354  NaN  0.204394 NaN   
+1990-02-20  1.671959 NaN  2.046625  NaN   NaN  1.762107  NaN  0.207859 NaN   
+1990-02-21  1.662487 NaN  2.032145  NaN   NaN  1.771406  NaN  0.207859 NaN   
+1990-02-22  1.681432 NaN  2.032145  NaN   NaN  1.752808  NaN  0.207859 NaN   
+1990-02-23  1.667222 NaN  2.046625  NaN   NaN  1.752808  NaN  0.207859 NaN   
+1990-02-26  1.722014 NaN  2.070761  NaN   NaN  1.794653  NaN  0.207859 NaN   
+1990-02-27  1.756257 NaN  2.114204  NaN   NaN  1.799302  NaN  0.214787 NaN   
+1990-02-28  1.741581 NaN  2.114204  NaN   NaN  1.748158  NaN  0.214787 NaN   
+1990-03-01  1.746474 NaN  2.162473  NaN   NaN  1.729561  NaN  0.221716 NaN   
+1990-03-02  1.800287 NaN  2.210742  NaN   NaN  1.738860  NaN  0.235573 NaN   
+1990-03-05  1.795395 NaN  2.201089  NaN   NaN  1.720263  NaN  0.239037 NaN   
+1990-03-06  1.780717 NaN  2.225222  NaN   NaN  1.752808  NaN  0.242502 NaN   
+1990-03-07  1.775826 NaN  2.201089  NaN   NaN  1.729561  NaN  0.259823 NaN   
+1990-03-08  1.707337 NaN  2.230050  NaN   NaN  1.738860  NaN  0.277145 NaN   
+1990-03-09  1.624172 NaN  2.201089  NaN   NaN  1.724913  NaN  0.263288 NaN   
+1990-03-12  1.619279 NaN  2.196261  NaN   NaN  1.729561  NaN  0.259823 NaN   
+
+                 PFE       JPM  SBUX  
+date                                  
+1989-12-29  0.110818  1.827968   NaN  
+1990-01-02  0.113209  1.835617   NaN  
+1990-01-03  0.113608  1.896803   NaN  
+1990-01-04  0.115402  1.904452   NaN  
+1990-01-05  0.114405  1.912100   NaN  
+1990-01-08  0.113409  1.912100   NaN  
+1990-01-09  0.111017  1.850914   NaN  
+1990-01-10  0.113010  1.843264   NaN  
+1990-01-11  0.111814  1.820320   NaN  
+1990-01-12  0.109821  1.805023   NaN  
+1990-01-15  0.109622  1.805023   NaN  
+1990-01-16  0.110818  1.797373   NaN  
+1990-01-17  0.110818  1.789726   NaN  
+1990-01-18  0.112611  1.774429   NaN  
+1990-01-19  0.112412  1.766781   NaN  
+1990-01-22  0.110618  1.713242   NaN  
+1990-01-23  0.109223  1.667352   NaN  
+1990-01-24  0.110220  1.675000   NaN  
+1990-01-25  0.108625  1.659703   NaN  
+1990-01-26  0.108027  1.621461   NaN  
+1990-01-29  0.109223  1.583220   NaN  
+1990-01-30  0.108027  1.544976   NaN  
+1990-01-31  0.109223  1.575571   NaN  
+1990-02-01  0.110020  1.590868   NaN  
+1990-02-02  0.110618  1.598516   NaN  
+1990-02-05  0.139342  1.590868   NaN  
+1990-02-06  0.137581  1.583220   NaN  
+1990-02-07  0.136323  1.590868   NaN  
+1990-02-08  0.137330  1.590868   NaN  
+1990-02-09  0.134814  1.583220   NaN  
+1990-02-12  0.135569  1.590868   NaN  
+1990-02-13  0.136072  1.575571   NaN  
+1990-02-14  0.136827  1.613812   NaN  
+1990-02-15  0.137078  1.652055   NaN  
+1990-02-16  0.133557  1.659703   NaN  
+1990-02-20  0.130790  1.613812   NaN  
+1990-02-21  0.128275  1.606165   NaN  
+1990-02-22  0.119220  1.583220   NaN  
+1990-02-23  0.113184  1.560275   NaN  
+1990-02-26  0.112681  1.590868   NaN  
+1990-02-27  0.118969  1.560275   NaN  
+1990-02-28  0.118717  1.567922   NaN  
+1990-03-01  0.120478  1.560275   NaN  
+1990-03-02  0.124251  1.590868   NaN  
+1990-03-05  0.119472  1.613812   NaN  
+1990-03-06  0.122742  1.629110   NaN  
+1990-03-07  0.122238  1.636757   NaN  
+1990-03-08  0.123496  1.682648   NaN  
+1990-03-09  0.121232  1.734941   NaN  
+1990-03-12  0.122490  1.776249   NaN  
+                   GOOG        AAPL          FB        BABA         AMZN  \
+date                                                                       
+2018-03-28  1004.559998  166.479996  153.029999  178.910004  1431.420044   
+2018-03-29  1031.790039  167.779999  159.789993  183.539993  1447.339966   
+2018-04-02  1006.469971  166.679993  155.389999  177.610001  1371.989990   
+2018-04-03  1013.409973  168.389999  156.110001  174.669998  1392.050049   
+2018-04-04  1025.140015  171.610001  155.100006  172.070007  1410.569946   
+2018-04-05  1027.810059  172.800003  159.339996  172.570007  1451.750000   
+2018-04-06  1007.039978  168.380005  157.199997  167.520004  1405.229980   
+2018-04-09  1015.450012  170.050003  157.929993  169.869995  1406.079956   
+2018-04-10  1031.640015  173.250000  165.039993  177.100006  1436.219971   
+2018-04-11  1019.969971  172.440002  166.320007  175.360001  1427.050049   
+
+               GE    AMD        WMT        BAC         GM          T  \
+date                                                                   
+2018-03-28  13.68   9.81  87.769997  29.389999  35.470001  35.060982   
+2018-03-29  13.48  10.05  88.970001  29.990000  36.340000  35.149719   
+2018-04-02  13.12   9.53  85.550003  29.309999  35.759998  34.607437   
+2018-04-03  13.13   9.55  86.800003  29.590000  36.939999  34.873646   
+2018-04-04  13.28   9.77  87.220001  29.879999  38.029999  35.376492   
+2018-04-05  13.43  10.02  87.809998  30.320000  38.000000  35.632843   
+2018-04-06  13.06   9.61  86.690002  29.629999  37.680000  35.130001   
+2018-04-09  12.83   9.53  86.279999  29.870001  37.830002  35.169998   
+2018-04-10  13.05   9.98  86.449997  30.480000  39.070000  35.810001   
+2018-04-11  12.97   9.82  85.910004  29.900000  39.000000  35.250000   
+
+                  UAA  SHLD        XOM    RRC        BBY          MA  \
+date                                                                   
+2018-03-28  16.330000  2.81  72.809998  14.34  68.559998  170.107758   
+2018-03-29  16.350000  2.67  74.610001  14.54  69.989998  174.910919   
+2018-04-02  16.100000  2.59  73.220001  13.74  68.919998  171.355988   
+2018-04-03  16.820000  2.69  75.019997  13.95  70.339996  172.224747   
+2018-04-04  17.889999  2.89  74.870003  13.78  72.860001  173.443008   
+2018-04-05  17.469999  2.97  76.019997  14.52  72.120003  175.550003   
+2018-04-06  16.980000  2.88  74.870003  13.97  70.489998  169.699997   
+2018-04-09  16.639999  2.82  74.870003  13.93  69.820000  170.339996   
+2018-04-10  16.820000  3.07  77.070000  14.78  71.720001  174.720001   
+2018-04-11  16.740000  3.30  77.430000  14.99  70.910004  172.360001   
+
+                  PFE         JPM       SBUX  
+date                                          
+2018-03-28  35.299999  107.455086  57.900002  
+2018-03-29  35.490002  109.415154  57.889999  
+2018-04-02  35.049999  107.305847  56.240002  
+2018-04-03  35.680000  108.778381  58.000000  
+2018-04-04  36.130001  110.430000  58.830002  
+2018-04-05  35.730000  111.879997  59.139999  
+2018-04-06  35.169998  109.089996  58.340000  
+2018-04-09  35.459999  110.400002  58.700001  
+2018-04-10  35.950001  112.510002  59.410000  
+2018-04-11  35.790001  110.620003  59.419998  
+GOOG    3691
+AAPL       0
+FB      5643
+BABA    6230
+AMZN    1865
+GE         0
+AMD        0
+WMT        0
+BAC        0
+GM      5266
+T          0
+UAA     4008
+SHLD    3363
+XOM        0
+RRC      757
+BBY        0
+MA      4136
+PFE        0
+JPM        0
+SBUX     630
+dtype: int64
+----
+
+
++*In[5]:*+
+[source, ipython3]
+----
+#read the CSV file '1yrTreasury'. This contains 1 year Treasury yields on a daily basis prices for 20 stocks 
+#between 1989 and 2018
+
+df_treasury = pd.read_csv(r"C:\Users\Cillian\PyPortfolioOpt\tests\resources\1yrTreasury.csv", parse_dates=True)
+print(df_treasury.head(50))
+print(df_treasury.tail(10))
+print(df_treasury.isna().sum())
+----
+
+
++*Out[5]:*+
+----
+          DATE  DGS1
+0   29/12/1989  7.76
+1   01/01/1990     .
+2   02/01/1990  7.81
+3   03/01/1990  7.85
+4   04/01/1990  7.82
+5   05/01/1990  7.79
+6   08/01/1990  7.81
+7   09/01/1990  7.78
+8   10/01/1990  7.77
+9   11/01/1990  7.77
+10  12/01/1990  7.76
+11  15/01/1990     .
+12  16/01/1990  7.92
+13  17/01/1990  7.91
+14  18/01/1990  8.05
+15  19/01/1990     8
+16  22/01/1990  7.98
+17  23/01/1990  7.97
+18  24/01/1990     8
+19  25/01/1990  8.03
+20  26/01/1990  8.07
+21  29/01/1990  8.08
+22  30/01/1990  8.09
+23  31/01/1990  8.08
+24  01/02/1990  8.09
+25  02/02/1990  8.13
+26  05/02/1990  8.15
+27  06/02/1990  8.15
+28  07/02/1990  8.17
+29  08/02/1990  8.13
+30  09/02/1990  8.03
+31  12/02/1990  8.06
+32  13/02/1990  7.95
+33  14/02/1990  8.03
+34  15/02/1990  8.11
+35  16/02/1990  8.09
+36  19/02/1990     .
+37  20/02/1990  8.24
+38  21/02/1990  8.22
+39  22/02/1990  8.17
+40  23/02/1990  8.11
+41  26/02/1990   8.1
+42  27/02/1990  8.06
+43  28/02/1990  8.12
+44  01/03/1990  8.21
+45  02/03/1990  8.22
+46  05/03/1990  8.31
+47  06/03/1990  8.31
+48  07/03/1990  8.29
+49  08/03/1990  8.35
+            DATE  DGS1
+8195  28/05/2021  0.05
+8196  31/05/2021     .
+8197  01/06/2021  0.04
+8198  02/06/2021  0.05
+8199  03/06/2021  0.04
+8200  04/06/2021  0.05
+8201  07/06/2021  0.05
+8202  08/06/2021  0.05
+8203  09/06/2021  0.05
+8204  10/06/2021  0.05
+DATE    0
+DGS1    0
+dtype: int64
+----
+
+
++*In[6]:*+
+[source, ipython3]
+----
+#clean the yields by:
+# (i) replacing dots with the previous prices
+# (ii) re-formatting the dats
+# (iii) setting the dates as the index
+# (iv) changing the yields into decimal format
+
+df_treasury['Y']=np.where(df_treasury['DGS1']=='.',df_treasury['DGS1'].shift(1, axis = 0),df_treasury['DGS1'])
+df_treasury['Y2']=np.where(df_treasury['Y']=='.',df_treasury['Y'].shift(1, axis = 0),df_treasury['Y'])
+
+a_list = []
+
+for d in df_treasury['DATE']:
+    x = datetime.strptime(d, '%d/%m/%Y')
+    a_list.append(x)
+
+df_treasury['real date'] = a_list
+
+b_list = []
+
+for y in df_treasury['Y2']:
+    x = float(y)
+    z = (x / 100)
+    b_list.append(z)
+
+df_treasury['Yield'] = b_list
+
+df_treasury_adj = df_treasury.drop(columns = ['DGS1', 'DATE', 'Y', 'Y2'])
+df_treasury_adj = df_treasury_adj.set_index('real date')
+----
+
+
++*In[7]:*+
+[source, ipython3]
+----
+# check the results
+
+print(df_treasury_adj.head(50))
+print(df_treasury_adj.head(10))
+print(df_treasury_adj.isna().sum())
+----
+
+
++*Out[7]:*+
+----
+             Yield
+real date         
+1989-12-29  0.0776
+1990-01-01  0.0776
+1990-01-02  0.0781
+1990-01-03  0.0785
+1990-01-04  0.0782
+1990-01-05  0.0779
+1990-01-08  0.0781
+1990-01-09  0.0778
+1990-01-10  0.0777
+1990-01-11  0.0777
+1990-01-12  0.0776
+1990-01-15  0.0776
+1990-01-16  0.0792
+1990-01-17  0.0791
+1990-01-18  0.0805
+1990-01-19  0.0800
+1990-01-22  0.0798
+1990-01-23  0.0797
+1990-01-24  0.0800
+1990-01-25  0.0803
+1990-01-26  0.0807
+1990-01-29  0.0808
+1990-01-30  0.0809
+1990-01-31  0.0808
+1990-02-01  0.0809
+1990-02-02  0.0813
+1990-02-05  0.0815
+1990-02-06  0.0815
+1990-02-07  0.0817
+1990-02-08  0.0813
+1990-02-09  0.0803
+1990-02-12  0.0806
+1990-02-13  0.0795
+1990-02-14  0.0803
+1990-02-15  0.0811
+1990-02-16  0.0809
+1990-02-19  0.0809
+1990-02-20  0.0824
+1990-02-21  0.0822
+1990-02-22  0.0817
+1990-02-23  0.0811
+1990-02-26  0.0810
+1990-02-27  0.0806
+1990-02-28  0.0812
+1990-03-01  0.0821
+1990-03-02  0.0822
+1990-03-05  0.0831
+1990-03-06  0.0831
+1990-03-07  0.0829
+1990-03-08  0.0835
+             Yield
+real date         
+1989-12-29  0.0776
+1990-01-01  0.0776
+1990-01-02  0.0781
+1990-01-03  0.0785
+1990-01-04  0.0782
+1990-01-05  0.0779
+1990-01-08  0.0781
+1990-01-09  0.0778
+1990-01-10  0.0777
+1990-01-11  0.0777
+Yield    0
+dtype: int64
+----
+
+
++*In[8]:*+
+[source, ipython3]
+----
+# merge the two dataframes and check the results 
+
+df=pd.merge(df_stocks, df_treasury_adj, how='left', left_index=True, right_index=True)
+print(df.head(30))
+----
+
+
++*Out[8]:*+
+----
+            GOOG      AAPL  FB  BABA  AMZN        GE     AMD       WMT  \
+date                                                                     
+1989-12-29   NaN  0.117203 NaN   NaN   NaN  0.352438  3.9375  3.486070   
+1990-01-02   NaN  0.123853 NaN   NaN   NaN  0.364733  4.1250  3.660858   
+1990-01-03   NaN  0.124684 NaN   NaN   NaN  0.364050  4.0000  3.660858   
+1990-01-04   NaN  0.125100 NaN   NaN   NaN  0.362001  3.9375  3.641439   
+1990-01-05   NaN  0.125516 NaN   NaN   NaN  0.358586  3.8125  3.602595   
+1990-01-08   NaN  0.126347 NaN   NaN   NaN  0.360635  3.8125  3.651146   
+1990-01-09   NaN  0.125100 NaN   NaN   NaN  0.353122  3.8750  3.554040   
+1990-01-10   NaN  0.119697 NaN   NaN   NaN  0.353805  3.8125  3.554040   
+1990-01-11   NaN  0.114710 NaN   NaN   NaN  0.353805  3.8750  3.592883   
+1990-01-12   NaN  0.114710 NaN   NaN   NaN  0.344925  3.7500  3.456938   
+1990-01-15   NaN  0.113878 NaN   NaN   NaN  0.342193  3.6250  3.408385   
+1990-01-16   NaN  0.115957 NaN   NaN   NaN  0.345608  3.9375  3.466648   
+1990-01-17   NaN  0.110554 NaN   NaN   NaN  0.344242  3.8125  3.427804   
+1990-01-18   NaN  0.107644 NaN   NaN   NaN  0.347657  3.8125  3.369543   
+1990-01-19   NaN  0.113878 NaN   NaN   NaN  0.354488  3.7500  3.379253   
+1990-01-22   NaN  0.110554 NaN   NaN   NaN  0.343559  3.7500  3.291859   
+1990-01-23   NaN  0.112216 NaN   NaN   NaN  0.342876  3.6875  3.291859   
+1990-01-24   NaN  0.113047 NaN   NaN   NaN  0.345608  3.8125  3.311280   
+1990-01-25   NaN  0.113463 NaN   NaN   NaN  0.338778  3.8125  3.253019   
+1990-01-26   NaN  0.108891 NaN   NaN   NaN  0.341510  3.6875  3.272438   
+1990-01-29   NaN  0.110554 NaN   NaN   NaN  0.337412  3.6875  3.291859   
+1990-01-30   NaN  0.113047 NaN   NaN   NaN  0.337412  3.6250  3.262727   
+1990-01-31   NaN  0.113047 NaN   NaN   NaN  0.340144  3.6250  3.311280   
+1990-02-01   NaN  0.111800 NaN   NaN   NaN  0.337412  3.6250  3.272438   
+1990-02-02   NaN  0.113878 NaN   NaN   NaN  0.337412  3.5000  3.262727   
+1990-02-05   NaN  0.116372 NaN   NaN   NaN  0.337412  3.5625  3.243307   
+1990-02-06   NaN  0.115541 NaN   NaN   NaN  0.338778  3.5000  3.233596   
+1990-02-07   NaN  0.110554 NaN   NaN   NaN  0.342193  3.6875  3.320990   
+1990-02-08   NaN  0.109722 NaN   NaN   NaN  0.344242  3.6875  3.301569   
+1990-02-09   NaN  0.113878 NaN   NaN   NaN  0.345608  3.6250  3.388964   
+
+                 BAC  GM  ...  UAA  SHLD       XOM  RRC       BBY  MA  \
+date                      ...                                           
+1989-12-29  1.752478 NaN  ...  NaN   NaN  1.766756  NaN  0.166287 NaN   
+1990-01-02  1.766686 NaN  ...  NaN   NaN  1.766756  NaN  0.173216 NaN   
+1990-01-03  1.780897 NaN  ...  NaN   NaN  1.749088  NaN  0.194001 NaN   
+1990-01-04  1.743005 NaN  ...  NaN   NaN  1.731422  NaN  0.190537 NaN   
+1990-01-05  1.705114 NaN  ...  NaN   NaN  1.722587  NaN  0.190537 NaN   
+1990-01-08  1.714586 NaN  ...  NaN   NaN  1.749088  NaN  0.176680 NaN   
+1990-01-09  1.714586 NaN  ...  NaN   NaN  1.713754  NaN  0.176680 NaN   
+1990-01-10  1.681432 NaN  ...  NaN   NaN  1.722587  NaN  0.173216 NaN   
+1990-01-11  1.667222 NaN  ...  NaN   NaN  1.731422  NaN  0.169751 NaN   
+1990-01-12  1.619857 NaN  ...  NaN   NaN  1.687252  NaN  0.166287 NaN   
+1990-01-15  1.572494 NaN  ...  NaN   NaN  1.709336  NaN  0.169751 NaN   
+1990-01-16  1.629331 NaN  ...  NaN   NaN  1.700503  NaN  0.173216 NaN   
+1990-01-17  1.638804 NaN  ...  NaN   NaN  1.674001  NaN  0.173216 NaN   
+1990-01-18  1.615122 NaN  ...  NaN   NaN  1.696086  NaN  0.169751 NaN   
+1990-01-19  1.676695 NaN  ...  NaN   NaN  1.718172  NaN  0.180144 NaN   
+1990-01-22  1.648276 NaN  ...  NaN   NaN  1.660751  NaN  0.176680 NaN   
+1990-01-23  1.681432 NaN  ...  NaN   NaN  1.665167  NaN  0.194001 NaN   
+1990-01-24  1.662487 NaN  ...  NaN   NaN  1.660751  NaN  0.190537 NaN   
+1990-01-25  1.657749 NaN  ...  NaN   NaN  1.625416  NaN  0.194001 NaN   
+1990-01-26  1.629331 NaN  ...  NaN   NaN  1.651917  NaN  0.190537 NaN   
+1990-01-29  1.610385 NaN  ...  NaN   NaN  1.660751  NaN  0.190537 NaN   
+1990-01-30  1.548811 NaN  ...  NaN   NaN  1.660751  NaN  0.187073 NaN   
+1990-01-31  1.591439 NaN  ...  NaN   NaN  1.660751  NaN  0.190537 NaN   
+1990-02-01  1.567757 NaN  ...  NaN   NaN  1.660751  NaN  0.197466 NaN   
+1990-02-02  1.624595 NaN  ...  NaN   NaN  1.691669  NaN  0.197466 NaN   
+1990-02-05  1.591439 NaN  ...  NaN   NaN  1.696086  NaN  0.204394 NaN   
+1990-02-06  1.572494 NaN  ...  NaN   NaN  1.757457  NaN  0.204394 NaN   
+1990-02-07  1.600912 NaN  ...  NaN   NaN  1.785354  NaN  0.200930 NaN   
+1990-02-08  1.581967 NaN  ...  NaN   NaN  1.790003  NaN  0.214787 NaN   
+1990-02-09  1.596175 NaN  ...  NaN   NaN  1.794653  NaN  0.214787 NaN   
+
+                 PFE       JPM  SBUX   Yield  
+date                                          
+1989-12-29  0.110818  1.827968   NaN  0.0776  
+1990-01-02  0.113209  1.835617   NaN  0.0781  
+1990-01-03  0.113608  1.896803   NaN  0.0785  
+1990-01-04  0.115402  1.904452   NaN  0.0782  
+1990-01-05  0.114405  1.912100   NaN  0.0779  
+1990-01-08  0.113409  1.912100   NaN  0.0781  
+1990-01-09  0.111017  1.850914   NaN  0.0778  
+1990-01-10  0.113010  1.843264   NaN  0.0777  
+1990-01-11  0.111814  1.820320   NaN  0.0777  
+1990-01-12  0.109821  1.805023   NaN  0.0776  
+1990-01-15  0.109622  1.805023   NaN  0.0776  
+1990-01-16  0.110818  1.797373   NaN  0.0792  
+1990-01-17  0.110818  1.789726   NaN  0.0791  
+1990-01-18  0.112611  1.774429   NaN  0.0805  
+1990-01-19  0.112412  1.766781   NaN  0.0800  
+1990-01-22  0.110618  1.713242   NaN  0.0798  
+1990-01-23  0.109223  1.667352   NaN  0.0797  
+1990-01-24  0.110220  1.675000   NaN  0.0800  
+1990-01-25  0.108625  1.659703   NaN  0.0803  
+1990-01-26  0.108027  1.621461   NaN  0.0807  
+1990-01-29  0.109223  1.583220   NaN  0.0808  
+1990-01-30  0.108027  1.544976   NaN  0.0809  
+1990-01-31  0.109223  1.575571   NaN  0.0808  
+1990-02-01  0.110020  1.590868   NaN  0.0809  
+1990-02-02  0.110618  1.598516   NaN  0.0813  
+1990-02-05  0.139342  1.590868   NaN  0.0815  
+1990-02-06  0.137581  1.583220   NaN  0.0815  
+1990-02-07  0.136323  1.590868   NaN  0.0817  
+1990-02-08  0.137330  1.590868   NaN  0.0813  
+1990-02-09  0.134814  1.583220   NaN  0.0803  
+
+[30 rows x 21 columns]
+----
+
+
++*In[9]:*+
+[source, ipython3]
+----
+print(df.describe())
+print(df.shape)
+----
+
+
++*Out[9]:*+
+----
+              GOOG         AAPL           FB        BABA         AMZN  \
+count  3435.000000  7126.000000  1483.000000  896.000000  5261.000000   
+mean    404.387582    25.835313    90.008874  108.975770   204.104432   
+std     253.953939    42.540042    48.740896   38.905877   286.881539   
+min      49.681866     0.107644    17.730000   57.389999     1.395833   
+25%     229.293663     0.656579    49.430001   81.422501    35.779999   
+50%     298.130951     2.336104    81.529999   93.980000    72.959999   
+75%     553.407074    32.694097   124.370003  122.839998   259.029999   
+max    1175.839966   181.720001   193.089996  205.220001  1598.390015   
+
+                GE          AMD          WMT          BAC           GM  ...  \
+count  7126.000000  7126.000000  7126.000000  7126.000000  1860.000000  ...   
+mean     15.699387    10.908633    36.464622    16.167461    28.590592  ...   
+std       9.196879     7.631799    22.410342    11.168507     6.041822  ...   
+min       0.330582     1.620000     3.155911     0.721589    15.792495  ...   
+25%       7.990673     5.410000    10.280261     7.289795    25.237609  ...   
+50%      17.375850     9.025000    38.253588    14.433516    29.077636  ...   
+75%      22.946835    14.373750    45.560174    22.448644    31.990400  ...   
+max      34.364174    47.500000   108.900742    44.578407    45.597179  ...   
+
+               UAA         SHLD          XOM          RRC          BBY  \
+count  3118.000000  3763.000000  7126.000000  6369.000000  7126.000000   
+mean     15.740957    51.825959    39.004502    26.038311    20.210748   
+std      13.465476    34.662096    28.163923    24.405236    15.611006   
+min       1.541250     2.070000     1.625416     0.913313     0.128179   
+25%       4.680937    25.834365    13.131118     4.465834     2.381281   
+50%      10.356875    43.383633    29.179296    15.909173    21.844404   
+75%      21.688750    71.739987    66.500460    43.347126    31.353951   
+max      52.049999   145.668777    91.645515    92.447586    77.558472   
+
+                MA          PFE          JPM         SBUX        Yield  
+count  2990.000000  7126.000000  7126.000000  6496.000000  7126.000000  
+mean     52.710875    15.501294    29.159384    14.754588     0.030913  
+std      42.168566     9.790708    21.856956    17.580205     0.023732  
+min       3.347924     0.108027     0.791709     0.275567     0.000800  
+25%      17.764871     7.242612    14.108327     2.415215     0.005500  
+50%      38.368206    16.112992    27.486339     7.298548     0.033000  
+75%      86.291878    22.327376    35.965253    17.854347     0.052700  
+max     182.979431    38.661823   118.170746    63.596146     0.086400  
+
+[8 rows x 21 columns]
+(7126, 21)
+----
+
+
++*In[10]:*+
+[source, ipython3]
+----
+# split the dataframe into Prices and Prices_ext. Prices will be 6000 rows long and Prices_ext will be 6250. 
+
+Prices = df.iloc[1126:, :]
+Prices_ext = df.iloc[876:, :]
+
+print(Prices.shape)
+print(Prices.head())
+
+print(Prices_ext.shape)
+print(Prices_ext.head())
+----
+
+
++*Out[10]:*+
+----
+(6000, 21)
+            GOOG      AAPL  FB  BABA  AMZN        GE      AMD       WMT  \
+date                                                                      
+1994-06-14   NaN  0.388874 NaN   NaN   NaN  2.516703  13.4375  8.353536   
+1994-06-15   NaN  0.399651 NaN   NaN   NaN  2.490487  13.2500  8.269581   
+1994-06-16   NaN  0.378995 NaN   NaN   NaN  2.516703  13.0000  8.353536   
+1994-06-17   NaN  0.380791 NaN   NaN   NaN  2.503596  13.0000  8.101673   
+1994-06-20   NaN  0.389772 NaN   NaN   NaN  2.483935  12.7500  8.227605   
+
+                 BAC  GM  ...  UAA  SHLD       XOM       RRC       BBY  MA  \
+date                      ...                                                
+1994-06-14  4.173676 NaN  ...  NaN   NaN  4.922016  4.539053  2.213694 NaN   
+1994-06-15  4.145600 NaN  ...  NaN   NaN  4.765262  4.612259  2.265659 NaN   
+1994-06-16  4.061380 NaN  ...  NaN   NaN  4.922016  4.831892  2.244874 NaN   
+1994-06-17  4.005231 NaN  ...  NaN   NaN  4.911565  4.685468  2.307230 NaN   
+1994-06-20  3.939724 NaN  ...  NaN   NaN  4.901114  4.612259  2.369589 NaN   
+
+                 PFE       JPM      SBUX   Yield  
+date                                              
+1994-06-14  1.623517  4.911616  0.749798  0.0514  
+1994-06-15  1.623517  4.911616  0.749798  0.0519  
+1994-06-16  1.617187  4.911616  0.759411  0.0515  
+1994-06-17  1.620351  4.850791  0.759411  0.0520  
+1994-06-20  1.617187  4.789968  0.730573  0.0524  
+
+[5 rows x 21 columns]
+(6250, 21)
+            GOOG      AAPL  FB  BABA  AMZN        GE      AMD       WMT  \
+date                                                                      
+1993-06-17   NaN  0.374542 NaN   NaN   NaN  1.945769  10.3125  8.591062   
+1993-06-18   NaN  0.372272 NaN   NaN   NaN  1.938108  10.3750  8.342043   
+1993-06-21   NaN  0.359787 NaN   NaN   NaN  1.945769  10.6875  8.342043   
+1993-06-22   NaN  0.375677 NaN   NaN   NaN  1.940661  10.6875  8.259038   
+1993-06-23   NaN  0.367732 NaN   NaN   NaN  1.961088  10.5625  8.591062   
+
+                 BAC  GM  ...  UAA  SHLD       XOM       RRC       BBY  MA  \
+date                      ...                                                
+1993-06-17  3.054142 NaN  ...  NaN   NaN  4.677915  4.392628  0.976936 NaN   
+1993-06-18  3.135369 NaN  ...  NaN   NaN  4.582090  4.246203  0.970007 NaN   
+1993-06-21  3.184105 NaN  ...  NaN   NaN  4.564667  4.246203  0.994257 NaN   
+1993-06-22  3.200350 NaN  ...  NaN   NaN  4.608224  4.319422  0.966543 NaN   
+1993-06-23  3.111001 NaN  ...  NaN   NaN  4.547245  4.392628  0.931900 NaN   
+
+                 PFE       JPM      SBUX   Yield  
+date                                              
+1993-06-17  1.313586  4.320264  0.621627  0.0346  
+1993-06-18  1.267457  4.251905  0.592789  0.0352  
+1993-06-21  1.230115  4.388622  0.578370  0.0352  
+1993-06-22  1.223525  4.470652  0.595994  0.0351  
+1993-06-23  1.225721  4.347607  0.589585  0.0356  
+
+[5 rows x 21 columns]
+----
+
+
++*In[11]:*+
+[source, ipython3]
+----
+# create a returns DF for the stock prices. To avoid a row of NA's I extend Prices by 1 row, then calculate pct_change, then
+# remove the first row again
+
+Prices_and_1 = df.iloc[1125:, :]
+Returns = Prices_and_1.pct_change()
+Returns = Returns.iloc[1:, 0:20]
+
+print(Returns.shape)
+print(Returns.head())
+
+----
+
+
++*Out[11]:*+
+----
+(6000, 20)
+            GOOG      AAPL  FB  BABA  AMZN        GE       AMD       WMT  \
+date                                                                       
+1994-06-14   NaN  0.002315 NaN   NaN   NaN -0.005182  0.009390  0.010152   
+1994-06-15   NaN  0.027713 NaN   NaN   NaN -0.010417 -0.013953 -0.010050   
+1994-06-16   NaN -0.051685 NaN   NaN   NaN  0.010526 -0.018868  0.010152   
+1994-06-17   NaN  0.004739 NaN   NaN   NaN -0.005208  0.000000 -0.030150   
+1994-06-20   NaN  0.023585 NaN   NaN   NaN -0.007853 -0.019231  0.015544   
+
+                 BAC  GM         T  UAA  SHLD       XOM       RRC       BBY  \
+date                                                                          
+1994-06-14 -0.017621 NaN  0.000000  NaN   NaN -0.012579  0.000000  0.028986   
+1994-06-15 -0.006727 NaN  0.000000  NaN   NaN -0.031848  0.016128  0.023474   
+1994-06-16 -0.020316 NaN  0.008746  NaN   NaN  0.032895  0.047619 -0.009174   
+1994-06-17 -0.013825 NaN -0.005780  NaN   NaN -0.002123 -0.030304  0.027777   
+1994-06-20 -0.016355 NaN -0.002907  NaN   NaN -0.002128 -0.015625  0.027028   
+
+            MA       PFE       JPM      SBUX  
+date                                          
+1994-06-14 NaN  0.011835 -0.012232 -0.025001  
+1994-06-15 NaN  0.000000  0.000000  0.000000  
+1994-06-16 NaN -0.003899  0.000000  0.012821  
+1994-06-17 NaN  0.001956 -0.012384  0.000000  
+1994-06-20 NaN -0.001953 -0.012539 -0.037974  
+----
+
+
++*In[12]:*+
+[source, ipython3]
+----
+# Provides the weights (clean or raw) for the optimal portfolio, according to the Sharpe Ratio or Minimum Volatility.
+# returns a list of weights (user can specify clean or raw)
+
+def SR_or_MV_Weights(df, lower_bound, upper_bound, clean=True, Sharpe=True):
+    df_ = df
+    mu = expected_returns.mean_historical_return(df_)
+    S = risk_models.sample_cov(df_)
+
+    # Optimize for maximal Sharpe ratio or Minimum Volatility
+    ef = EfficientFrontier(mu, S, weight_bounds=(lower_bound, upper_bound))
+                        
+    if Sharpe==True:
+        raw_weights = ef.max_sharpe()
+    else:
+        raw_weights = ef.min_volatility()
+
+    if clean == True:
+        cleaned_weights = ef.clean_weights()
+        return cleaned_weights
+    else:
+        return raw_weights
+----
+
+
++*In[13]:*+
+[source, ipython3]
+----
+# calculates and returns Portfolio Return, Treasury Return, Volatility and Sharpe Ratio
+# can return these on a total basis or annual basis
+def calculate_values_from_list(returns, treasury_returns, number_of_days, annual=False):
+    
+    ret_ = 1
+    
+    for val in returns:
+        ret_ = ret_ * (1+val)
+    ret_ = ret_ - 1
+    
+    vol_ = np.std(returns) * np.sqrt(len(returns))
+    
+    t_ret_ = 1
+    
+    for iterations in range(int(treasury_returns.shape[0] / number_of_days)):
+        line = iterations * number_of_days
+        x = ((1 + treasury_returns[line])**(number_of_days/252))
+        t_ret_ = t_ret_ * x
+    
+    t_ret_ = t_ret_ - 1
+    
+    SR_ = (ret_ - t_ret_) / vol_
+    
+    if annual == False:
+        return ret_, t_ret_, vol_, SR_
+    else:
+        a_ret_ = (1+ret_)**(252 / len(returns)) - 1
+        a_t_ret_ = (1+t_ret_)**(252 / treasury_returns.shape[0]) - 1
+        d_vol_ = (vol_ / np.sqrt(len(returns)))
+        a_vol_ = d_vol_ * np.sqrt(252)
+        a_SR_ = (a_ret_ - a_t_ret_) / a_vol_
+                
+        return a_ret_, a_t_ret_, a_vol_, a_SR_
+
+----
+
+
++*In[14]:*+
+[source, ipython3]
+----
+HS_df_results_columns = ['# Days', 'Annual Return', 'Annual RFR', 'Annual Volatility', 'Annual Sharpe Ratio']
+----
+
+
++*In[15]:*+
+[source, ipython3]
+----
+# takes dataframes of stock prices, stock returns, yields and some parameters. 
+# it calculates portfolio returns one would have realised if they had (with Hindsight knowledge) assigned the 
+# optimal weights (Sharpe or Miv Vol) to the portfolio of stocks every time it was re-balanced. 
+
+# There is a deBugMode. If set to True, many of the calculations and parameters are printed.
+
+# A Dataframe of results is returns.
+
+def Hindsight_SR_or_MV(Periods, PricesDF, Returns, treasury_yields, startCol, endCol,\
+                       lowerBound, upperBound, cleanWeights=True, deBugMode=False, Sharpe=True):
+    
+    Annual_Results_DF = pd.DataFrame(columns = HS_df_results_columns)
+    
+    for number_of_days in Periods:
+        
+        if deBugMode==True:
+            weight_column_names = ['returns'] 
+        
+            for col in Returns.columns:
+                weight_column_names.append(col)
+            deBugResults = pd.DataFrame(columns = weight_column_names)
+        
+        returns_list = []
+        number_of_iterations = int(PricesDF.shape[0] / number_of_days)
+
+        for iterations in range(number_of_iterations):
+            startLine = (iterations*number_of_days)
+            endLine = ((1+iterations)*number_of_days)
+            
+            if deBugMode==True:
+                print('startLine = %s' % startLine)
+                print('endLine = %s' % endLine)
+                print('startCol = %s' % startCol)
+                print('endCol = %s' % endCol)
+            
+            if startLine == 0:
+                PricesDF_trim = PricesDF.iloc[startLine:endLine, startCol:endCol].dropna(axis=1)
+            
+            #if the start line isn't 0, then I have to drop columns whose previous value was NA. Otherwise, returns = NA.
+            else:
+                PricesDF_trim_plus1 = PricesDF.iloc[(startLine-1):endLine, startCol:endCol].dropna(axis=1)
+                PricesDF_trim = PricesDF_trim_plus1.iloc[1:, :].dropna(axis=1)
+            
+            #this will return a list of optimal weights
+            opt_weights = SR_or_MV_Weights(PricesDF_trim, lowerBound, upperBound, cleanWeights, Sharpe)
+            
+            if deBugMode==True:
+                print(opt_weights)
+
+            for i in range(startLine, endLine):
+                x = 0
+                for key, value in opt_weights.items():
+                    x = x + (Returns[key][i] * value)
+                returns_list.append(x)
+                
+                if deBugMode==True:
+                    to_append = [x]
+                    for col in Returns.columns:
+                        if col in opt_weights:
+                            to_append.append(opt_weights[col])
+                        else:
+                            to_append.append(0)
+                    a_series = pd.Series(to_append, index = deBugResults.columns)
+                    deBugResults = deBugResults.append(a_series, ignore_index=True)
+        
+        # this will return the annual values
+        annual_ret, annual_rfr, annual_vol, annual_SR = \
+        calculate_values_from_list(returns_list, treasury_yields, number_of_days, True)
+
+        
+        if deBugMode==True:
+            print('annual return = %s' % annual_ret)
+            print('annual rfr = %s' % annual_rfr)
+            print('annual vol = %s' % annual_vol)
+            print('annual SR = %s' % annual_SR)
+
+        to_append = [round(number_of_days,0), round(annual_ret,3),\
+                     round(annual_rfr,3), round(annual_vol,3), round(annual_SR,3)]
+        a_series = pd.Series(to_append, index = Annual_Results_DF.columns)
+        Annual_Results_DF = Annual_Results_DF.append(a_series, ignore_index=True)
+
+        if deBugMode==True:
+            pd.set_option("display.max_rows", None, "display.max_columns", None)
+            print(deBugResults)
+
+    return Annual_Results_DF
+    
+----
+
+
++*In[16]:*+
+[source, ipython3]
+----
+# Periods are the number of days in each period before a portfolio re-balancing occurs.
+Periods = [20, 40, 60, 80, 120, 180, 240]
+
+# Start Col and End Col are the columns in the Stock Prices DF to use.
+startCol = 0
+endCol = 20
+
+# I separate the Treasury yields away from the Prices DF
+treasuryYields = Prices['Yield']
+
+HS_MaxSharpeDFTable = Hindsight_SR_or_MV(Periods, Prices, Returns, treasuryYields, startCol, endCol, -1, 1, True, False, True)
+print(HS_MaxSharpeDFTable)
+----
+
+
++*Out[16]:*+
+----
+   # Days  Annual Return  Annual RFR  Annual Volatility  Annual Sharpe Ratio
+0    20.0         10.865       0.027              0.307               35.354
+1    40.0         20.613       0.027              0.430               47.892
+2    60.0         13.459       0.027              0.441               30.446
+3    80.0         11.310       0.027              0.486               23.198
+4   120.0          7.159       0.027              0.548               13.008
+5   180.0          5.108       0.028              0.563                9.026
+6   240.0          3.893       0.028              0.506                7.644
+----
+
+
++*In[17]:*+
+[source, ipython3]
+----
+# This will display a scatter plot for the results. 
+# Annual Return and Annual Vol will be showed for each portfolio. Each portfolio was constructed using the optimal weights
+# in rebalancing, every X days.
+
+
+def ScatterOfResultsDFTable(DF, atitle = 'Return & Volatility per # of Days in a Period', afigsize = (12,8)):
+    
+    fig, ax = plt.subplots()
+    
+    DF.plot(kind = 'scatter',
+            x='Annual Volatility',
+            y='Annual Return',
+            c='# Days',
+            colormap='viridis',
+            xlabel = 'Annual Volatility',
+            ylabel = 'Annual Return',
+            figsize = afigsize,
+            s = 100,  
+            title = atitle,
+            ax=ax)
+----
+
+
++*In[18]:*+
+[source, ipython3]
+----
+# This will display a scatter plot for the results. 
+# Annual Return and Annual Vol will be showed for each portfolio. Each portfolio was constructed using the optimal weights
+# in rebalancing, every X days.
+
+def ScatterOfResultsDFTable_OLD(DF, atitle = 'Return & Volatility per # of Days in a Period', afigsize = (12,8)):
+        
+    ax = DF.plot.scatter(x='Annual Volatility',
+                      y='Annual Return',
+                      c='# Days',
+                      colormap='viridis',
+                      xlabel = 'Annual Volatility',
+                      ylabel = 'Annual Return',
+                      figsize = afigsize,
+                      s = 100,  
+                      title = atitle)
+----
+
+
++*In[19]:*+
+[source, ipython3]
+----
+def BarChartSharpeRatios(DF):
+
+    SR = DF['Annual Sharpe Ratio']
+    SR_series = pd.Series(SR)
+
+    Labels = HS_MaxSharpeDFTable['# Days']
+    ax = SR_series.plot(kind='bar')
+    ax.set_title('Sharpe Ratio per # of Days in a Period')
+    ax.set_ylabel('Annual Sharpe Ratio')
+    ax.set_xlabel('# Days')
+    ax.set_xticklabels(Labels)
+
+----
+
+
++*In[20]:*+
+[source, ipython3]
+----
+ScatterOfResultsDFTable(HS_MaxSharpeDFTable)
+----
+
+
++*Out[20]:*+
+----
+![png](output_18_0.png)
+----
+
+
++*In[21]:*+
+[source, ipython3]
+----
+BarChartSharpeRatios(HS_MaxSharpeDFTable)
+----
+
+
++*Out[21]:*+
+----
+![png](output_19_0.png)
+----
+
+
++*In[22]:*+
+[source, ipython3]
+----
+# Running the model again, but this time to get the Portfolio of minimum volatility.
+
+Periods = [20, 40, 60, 80, 120, 180, 240]
+startCol = 0
+endCol = 20
+
+HS_MinVolDFTable = Hindsight_SR_or_MV(Periods, Prices, Returns, treasuryYields, startCol, endCol, -1, 1, True, False, False)
+print(HS_MinVolDFTable)
+----
+
+
++*Out[22]:*+
+----
+   # Days  Annual Return  Annual RFR  Annual Volatility  Annual Sharpe Ratio
+0    20.0          0.174       0.027              0.127                1.162
+1    40.0          0.178       0.027              0.118                1.282
+2    60.0          0.179       0.027              0.129                1.179
+3    80.0          0.175       0.027              0.136                1.088
+4   120.0          0.173       0.027              0.143                1.020
+5   180.0          0.163       0.028              0.148                0.914
+6   240.0          0.164       0.028              0.152                0.901
+----
+
+
++*In[23]:*+
+[source, ipython3]
+----
+ScatterOfResultsDFTable(HS_MinVolDFTable)
+----
+
+
++*Out[23]:*+
+----
+![png](output_21_0.png)
+----
+
+
++*In[24]:*+
+[source, ipython3]
+----
+BarChartSharpeRatios(HS_MinVolDFTable)
+----
+
+
++*Out[24]:*+
+----
+![png](output_22_0.png)
+----
+
+
++*In[25]:*+
+[source, ipython3]
+----
+df_results_columns = ['# Days', '# Days Hist', 'Annual Return', 'Annual RFR', 'Annual Volatility', 'Annual Sharpe Ratio']
+----
+
+
++*In[26]:*+
+[source, ipython3]
+----
+# takes dataframes of stock prices, stock returns, yields and some parameters. 
+# it calculates portfolio returns one would have realised if they had (withOUT Hindsight knowledge) assigned the 
+# optimal weights (Sharpe or Miv Vol) to the portfolio of stocks every time it was re-balanced. In this model, they calculate
+# the optimal weights on recent data.
+
+# There is a deBugMode. If set to True, many of the calculations and parameters are printed.
+
+# A Dataframe of results is returns.
+
+def Reality_SR_or_MV(Periods, HistDays, PricesDF, Returns, treasury_yields, startCol, endCol,\
+                     lowerBound, upperBound, cleanWeights=True, deBugMode=False, Sharpe=True):
+    
+    Annual_Results_DF = pd.DataFrame(columns = df_results_columns)
+    
+    for number_of_days in Periods:
+        for number_of_hist_days in HistDays:
+            
+            if deBugMode==True:
+                weight_column_names = ['returns'] 
+                for col in Returns.columns:
+                    weight_column_names.append(col)
+                deBugResults = pd.DataFrame(columns = weight_column_names)
+            
+            returns_list = []
+            number_of_iterations = int(Returns.shape[0] / number_of_days)
+            
+            for iterations in range(number_of_iterations):
+                invStartLine = (iterations*number_of_days)
+                invEndLine = invStartLine + number_of_days
+                histStartLine = (250 - number_of_hist_days) + invStartLine
+                histEndLine = histStartLine + number_of_hist_days
+
+                if deBugMode==True:
+                    print('Investment StartLine = %s' % invStartLine)
+                    print('Investment EndLine = %s' % invEndLine)
+                    print('Hist StartLine = %s' % histStartLine)
+                    print('Hist EndLine = %s' % histEndLine)
+                    print('startCol = %s' % startCol)
+                    print('endCol = %s' % endCol)
+                
+                # Use the histStart and histEnd lines to calculate the optimal weights (these are in the past)
+                PricesDF_trim = PricesDF.iloc[histStartLine:histEndLine, startCol:endCol].dropna(axis=1)
+                #this will return a list of optimal weights
+                opt_weights = SR_or_MV_Weights(PricesDF_trim, lowerBound, upperBound, cleanWeights, Sharpe)
+                
+                if deBugMode==True:
+                    print(opt_weights)
+
+                # Use the InvStart and InvEnd lines to calculate the portfolio returns
+                for i in range(invStartLine, invEndLine):
+                    x = 0
+                    for key, value in opt_weights.items():
+                        x = x + (Returns[key][i] * value)
+                    returns_list.append(x) 
+
+                    if deBugMode==True:
+                        to_append = [x]
+                        for col in Returns.columns:
+                            if col in opt_weights:
+                                to_append.append(opt_weights[col])
+                            else:
+                                to_append.append(0)
+                        a_series = pd.Series(to_append, index = deBugResults.columns)
+                        deBugResults = deBugResults.append(a_series, ignore_index=True)
+            
+            #this will return the annual values
+            annual_ret, annual_rfr, annual_vol, annual_SR =\
+            calculate_values_from_list(returns_list, treasury_yields, number_of_days, True)
+
+            if deBugMode==True:
+                print('annual return = %s' % annual_ret)
+                print('annual rfr = %s' % annual_rfr)
+                print('annual vol = %s' % annual_vol)
+                print('annual SR = %s' % annual_SR)
+
+            to_append = [round(number_of_days,0), round(number_of_hist_days,0),\
+                         round(annual_ret,3), round(annual_rfr,3), round(annual_vol,3), round(annual_SR,3)]
+            a_series = pd.Series(to_append, index = Annual_Results_DF.columns)
+            Annual_Results_DF = Annual_Results_DF.append(a_series, ignore_index=True)
+
+            if deBugMode==True:
+                pd.set_option("display.max_rows", None, "display.max_columns", None)
+                print(deBugResults)
+                deBugResults.to_excel("output.xlsx") 
+
+    return Annual_Results_DF
+----
+
+
++*In[27]:*+
+[source, ipython3]
+----
+# Periods are the number of days in each period before a portfolio re-balancing occurs.
+# HistDays is how many previous days of data do we look at to calculate the optimal weights
+
+Periods = [20, 40, 60, 80, 120, 180, 240]
+HistDays = [30, 60, 90, 150, 250]
+
+startCol = 0
+endCol = 20
+
+treasury_yields = Prices['Yield']
+
+RealityMaxSharpeDFTable = Reality_SR_or_MV(Periods, HistDays, Prices_ext, Returns,\
+                                           treasury_yields, startCol, endCol, -1, 1, True, False, True)
+print(RealityMaxSharpeDFTable)
+----
+
+
++*Out[27]:*+
+----
+    # Days  # Days Hist  Annual Return  Annual RFR  Annual Volatility  \
+0     20.0         30.0          0.267       0.027              0.606   
+1     20.0         60.0          0.008       0.027              0.602   
+2     20.0         90.0          0.027       0.027              0.598   
+3     20.0        150.0          0.212       0.027              0.620   
+4     20.0        250.0          0.328       0.027              0.620   
+5     40.0         30.0          0.179       0.027              0.620   
+6     40.0         60.0         -0.023       0.027              0.582   
+7     40.0         90.0          0.049       0.027              0.581   
+8     40.0        150.0          0.206       0.027              0.618   
+9     40.0        250.0          0.352       0.027              0.600   
+10    60.0         30.0          0.108       0.027              0.665   
+11    60.0         60.0         -0.057       0.027              0.601   
+12    60.0         90.0          0.076       0.027              0.622   
+13    60.0        150.0          0.257       0.027              0.651   
+14    60.0        250.0          0.343       0.027              0.623   
+15    80.0         30.0          0.154       0.027              0.602   
+16    80.0         60.0         -0.096       0.027              0.584   
+17    80.0         90.0          0.086       0.027              0.588   
+18    80.0        150.0          0.326       0.027              0.612   
+19    80.0        250.0          0.283       0.027              0.605   
+20   120.0         30.0          0.292       0.027              0.631   
+21   120.0         60.0          0.070       0.027              0.596   
+22   120.0         90.0          0.166       0.027              0.618   
+23   120.0        150.0          0.366       0.027              0.663   
+24   120.0        250.0          0.384       0.027              0.599   
+25   180.0         30.0          0.193       0.028              0.648   
+26   180.0         60.0          0.287       0.028              0.565   
+27   180.0         90.0          0.273       0.028              0.616   
+28   180.0        150.0          0.277       0.028              0.708   
+29   180.0        250.0          0.241       0.028              0.633   
+30   240.0         30.0          0.167       0.028              0.659   
+31   240.0         60.0          0.119       0.028              0.584   
+32   240.0         90.0          0.109       0.028              0.613   
+33   240.0        150.0          0.178       0.028              0.658   
+34   240.0        250.0          0.196       0.028              0.588   
+
+    Annual Sharpe Ratio  
+0                 0.396  
+1                -0.031  
+2                 0.000  
+3                 0.298  
+4                 0.486  
+5                 0.246  
+6                -0.086  
+7                 0.038  
+8                 0.290  
+9                 0.542  
+10                0.121  
+11               -0.139  
+12                0.079  
+13                0.354  
+14                0.508  
+15                0.211  
+16               -0.210  
+17                0.100  
+18                0.489  
+19                0.424  
+20                0.420  
+21                0.071  
+22                0.225  
+23                0.511  
+24                0.595  
+25                0.255  
+26                0.458  
+27                0.399  
+28                0.352  
+29                0.337  
+30                0.211  
+31                0.157  
+32                0.133  
+33                0.229  
+34                0.286  
+----
+
+
++*In[28]:*+
+[source, ipython3]
+----
+# Run through each of the # Hist days, and scatter plot the results, i.e. Return and Volatility 
+# for each # of Days before re-balancing
+
+for v in HistDays:
+    df = RealityMaxSharpeDFTable.loc[RealityMaxSharpeDFTable['# Days Hist'] == v]
+    ScatterOfResultsDFTable(df, '%s day History' % v, (6,4))
+    
+----
+
+
++*Out[28]:*+
+----
+![png](output_26_0.png)
+
+![png](output_26_1.png)
+
+![png](output_26_2.png)
+
+![png](output_26_3.png)
+
+![png](output_26_4.png)
+----
+
+
++*In[29]:*+
+[source, ipython3]
+----
+# this function will create a bar chart showing the Annual Return, Volatility or Sharpe Ratio of our results DF
+
+def SNSPLot(y_axis, DF, asize = (10,8)):
+    sns.set(rc={'figure.figsize':asize})
+    Atitle = '%s per combination of # Days in a period and # Days History' % y_axis
+    sns.barplot(x = "# Days Hist", y = y_axis, hue = "# Days", ci = None, data = DF).set_title(Atitle)
+    plt.show()
+----
+
+
++*In[30]:*+
+[source, ipython3]
+----
+SNSPLot('Annual Return', RealityMaxSharpeDFTable)
+----
+
+
++*Out[30]:*+
+----
+![png](output_28_0.png)
+----
+
+
++*In[31]:*+
+[source, ipython3]
+----
+SNSPLot('Annual Volatility', RealityMaxSharpeDFTable)
+----
+
+
++*Out[31]:*+
+----
+![png](output_29_0.png)
+----
+
+
++*In[32]:*+
+[source, ipython3]
+----
+SNSPLot('Annual Sharpe Ratio', RealityMaxSharpeDFTable)
+----
+
+
++*Out[32]:*+
+----
+![png](output_30_0.png)
+----
+
+
++*In[33]:*+
+[source, ipython3]
+----
+# Run the model again, this time getting the minimum volatility weights
+
+# Periods are the number of days in each period before a portfolio re-balancing occurs.
+# HistDays is how many previous days of data do we look at to calculate the optimal weights
+
+Periods = [20, 40, 60, 80, 120, 180, 240]
+HistDays = [30, 60, 90, 150, 250]
+
+startCol = 0
+endCol = 20
+
+treasury_yields = Prices['Yield']
+
+RealityMinVolDFTable = Reality_SR_or_MV(Periods, HistDays, Prices_ext, Returns, treasury_yields,\
+                                        startCol, endCol, -1, 1, True, False, False)
+print(RealityMinVolDFTable)
+----
+
+
++*Out[33]:*+
+----
+    # Days  # Days Hist  Annual Return  Annual RFR  Annual Volatility  \
+0     20.0         30.0          0.167       0.027              0.236   
+1     20.0         60.0          0.188       0.027              0.191   
+2     20.0         90.0          0.178       0.027              0.180   
+3     20.0        150.0          0.169       0.027              0.176   
+4     20.0        250.0          0.159       0.027              0.173   
+5     40.0         30.0          0.173       0.027              0.239   
+6     40.0         60.0          0.175       0.027              0.192   
+7     40.0         90.0          0.165       0.027              0.185   
+8     40.0        150.0          0.160       0.027              0.179   
+9     40.0        250.0          0.157       0.027              0.175   
+10    60.0         30.0          0.156       0.027              0.237   
+11    60.0         60.0          0.174       0.027              0.198   
+12    60.0         90.0          0.171       0.027              0.186   
+13    60.0        150.0          0.150       0.027              0.180   
+14    60.0        250.0          0.149       0.027              0.176   
+15    80.0         30.0          0.160       0.027              0.230   
+16    80.0         60.0          0.176       0.027              0.193   
+17    80.0         90.0          0.153       0.027              0.185   
+18    80.0        150.0          0.163       0.027              0.179   
+19    80.0        250.0          0.155       0.027              0.176   
+20   120.0         30.0          0.113       0.027              0.238   
+21   120.0         60.0          0.156       0.027              0.194   
+22   120.0         90.0          0.163       0.027              0.187   
+23   120.0        150.0          0.144       0.027              0.180   
+24   120.0        250.0          0.152       0.027              0.176   
+25   180.0         30.0          0.137       0.028              0.248   
+26   180.0         60.0          0.159       0.028              0.195   
+27   180.0         90.0          0.153       0.028              0.187   
+28   180.0        150.0          0.152       0.028              0.182   
+29   180.0        250.0          0.149       0.028              0.178   
+30   240.0         30.0          0.122       0.028              0.248   
+31   240.0         60.0          0.153       0.028              0.205   
+32   240.0         90.0          0.149       0.028              0.195   
+33   240.0        150.0          0.125       0.028              0.189   
+34   240.0        250.0          0.139       0.028              0.185   
+
+    Annual Sharpe Ratio  
+0                 0.597  
+1                 0.847  
+2                 0.840  
+3                 0.807  
+4                 0.764  
+5                 0.611  
+6                 0.772  
+7                 0.749  
+8                 0.746  
+9                 0.744  
+10                0.545  
+11                0.746  
+12                0.775  
+13                0.684  
+14                0.693  
+15                0.578  
+16                0.770  
+17                0.678  
+18                0.760  
+19                0.727  
+20                0.360  
+21                0.661  
+22                0.723  
+23                0.647  
+24                0.712  
+25                0.439  
+26                0.673  
+27                0.673  
+28                0.683  
+29                0.678  
+30                0.380  
+31                0.613  
+32                0.622  
+33                0.516  
+34                0.606  
+----
+
+
++*In[34]:*+
+[source, ipython3]
+----
+# Run through each of the # Hist days, and scatter plot the results, i.e. Return and Volatility 
+# for each # of Days before re-balancing
+
+for v in HistDays:
+    df = RealityMinVolDFTable.loc[RealityMinVolDFTable['# Days Hist'] == v]
+    ScatterOfResultsDFTable(df, '%s day History' % v, (8,5))
+----
+
+
++*Out[34]:*+
+----
+![png](output_32_0.png)
+
+![png](output_32_1.png)
+
+![png](output_32_2.png)
+
+![png](output_32_3.png)
+
+![png](output_32_4.png)
+----
+
+
++*In[35]:*+
+[source, ipython3]
+----
+SNSPLot('Annual Return', RealityMinVolDFTable)
+----
+
+
++*Out[35]:*+
+----
+![png](output_33_0.png)
+----
+
+
++*In[36]:*+
+[source, ipython3]
+----
+SNSPLot('Annual Volatility', RealityMinVolDFTable)
+----
+
+
++*Out[36]:*+
+----
+![png](output_34_0.png)
+----
+
+
++*In[37]:*+
+[source, ipython3]
+----
+SNSPLot('Annual Sharpe Ratio', RealityMinVolDFTable)
+----
+
+
++*Out[37]:*+
+----
+![png](output_35_0.png)
+----
+
+
++*In[38]:*+
+[source, ipython3]
+----
+# function to generate a list of random weights. They will all either be + and sum to 1 or all - and sum to -1
+
+def randomWeights(number_weights, positive = True):
+    rand_list = []
+    weight_list = []
+    total = 0
+    
+    for j in range(number_weights):
+        random_weight = random.randint(0, 100)
+        total = total + random_weight
+        rand_list.append(random_weight)
+
+    if positive ==False:
+        total = total * -1
+        
+    for j in range(number_weights):
+        weight_list.append(rand_list[j] / total)
+        
+    return weight_list
+----
+
+
++*In[39]:*+
+[source, ipython3]
+----
+# function to generate a list of random weights. They are bound by -1 and 1 but will all sum to 1
+
+def generateRandomWeights(number_weights):
+    
+    weight_list = []
+    weight_list_1 = []
+    weight_list_2 = []
+    weight_list_3 = []
+
+    weight_list_1 = randomWeights(number_weights, True)
+    weight_list_2 = randomWeights(number_weights, False)
+    weight_list_3 = randomWeights(number_weights, True)
+    
+    for j in range(number_weights):
+        weight_list.append(weight_list_1[j] + weight_list_2[j] + weight_list_3[j])
+        
+    return weight_list
+----
+
+
++*In[40]:*+
+[source, ipython3]
+----
+# import a CVS file of CPIs (Inflation Rates) and analyse it
+
+df_inflation = pd.read_csv(r"C:\Users\Cillian\PyPortfolioOpt\tests\resources\US_CPI.csv", parse_dates=True)
+print(df_inflation.head(50))
+print(df_inflation.tail(10))
+print(df_inflation.isna().sum())
+
+----
+
+
++*Out[40]:*+
+----
+          DATE  CPALTT01USQ659N
+0   01/10/1989         4.598338
+1   01/01/1990         5.232877
+2   01/04/1990         4.582210
+3   01/07/1990         5.534759
+4   01/10/1990         6.223517
+5   01/01/1991         5.285082
+6   01/04/1991         4.845361
+7   01/07/1991         3.876362
+8   01/10/1991         2.991773
+9   01/01/1992         2.868447
+10  01/04/1992         3.097345
+11  01/07/1992         3.097561
+12  01/10/1992         3.050109
+13  01/01/1993         3.197115
+14  01/04/1993         3.147353
+15  01/07/1993         2.744263
+16  01/10/1993         2.724924
+17  01/01/1994         2.515723
+18  01/04/1994         2.380952
+19  01/07/1994         2.878195
+20  01/10/1994         2.652641
+21  01/01/1995         2.840264
+22  01/04/1995         3.093249
+23  01/07/1995         2.641003
+24  01/10/1995         2.650924
+25  01/01/1996         2.739726
+26  01/04/1996         2.847131
+27  01/07/1996         2.943742
+28  01/10/1996         3.190104
+29  01/01/1997         2.946237
+30  01/04/1997         2.342419
+31  01/07/1997         2.202923
+32  01/10/1997         1.871714
+33  01/01/1998         1.462294
+34  01/04/1998         1.602164
+35  01/07/1998         1.595855
+36  01/10/1998         1.548307
+37  01/01/1999         1.667696
+38  01/04/1999         2.109359
+39  01/07/1999         2.345981
+40  01/10/1999         2.622484
+41  01/01/2000         3.240178
+42  01/04/2000         3.329322
+43  01/07/2000         3.508073
+44  01/10/2000         3.427100
+45  01/01/2001         3.393488
+46  01/04/2001         3.377329
+47  01/07/2001         2.695937
+48  01/10/2001         1.857882
+49  01/01/2002         1.252134
+           DATE  CPALTT01USQ659N
+116  01/10/2018         2.203131
+117  01/01/2019         1.644936
+118  01/04/2019         1.811376
+119  01/07/2019         1.757489
+120  01/10/2019         2.032914
+121  01/01/2020         2.118652
+122  01/04/2020         0.364296
+123  01/07/2020         1.222386
+124  01/10/2020         1.239488
+125  01/01/2021         1.898514
+DATE               0
+CPALTT01USQ659N    0
+dtype: int64
+----
+
+
++*In[41]:*+
+[source, ipython3]
+----
+# clean the data by:
+#(i) formatting the dates
+#(ii) making the dates the index
+#(iii) changing the rates to decimals
+#(iv) changing the column headers
+
+a_list = []
+
+for d in df_inflation['DATE']:
+    x = datetime.strptime(d, '%d/%m/%Y')
+    a_list.append(x)
+
+df_inflation['real date'] = a_list
+
+b_list = []
+
+for y in df_inflation['CPALTT01USQ659N']:
+    x = float(y)
+    z = (x / 100)
+    b_list.append(z)
+
+df_inflation['CPI'] = b_list
+
+df_inflation_adj = df_inflation.drop(columns = ['CPALTT01USQ659N', 'DATE'])
+df_inflation_adj = df_inflation_adj.set_index('real date')
+
+----
+
+
++*In[42]:*+
+[source, ipython3]
+----
+#analyse the results
+print(df_inflation_adj.head(30))
+print(df_inflation_adj.tail(10))
+print(df_inflation_adj.shape)
+----
+
+
++*Out[42]:*+
+----
+                 CPI
+real date           
+1989-10-01  0.045983
+1990-01-01  0.052329
+1990-04-01  0.045822
+1990-07-01  0.055348
+1990-10-01  0.062235
+1991-01-01  0.052851
+1991-04-01  0.048454
+1991-07-01  0.038764
+1991-10-01  0.029918
+1992-01-01  0.028684
+1992-04-01  0.030973
+1992-07-01  0.030976
+1992-10-01  0.030501
+1993-01-01  0.031971
+1993-04-01  0.031474
+1993-07-01  0.027443
+1993-10-01  0.027249
+1994-01-01  0.025157
+1994-04-01  0.023810
+1994-07-01  0.028782
+1994-10-01  0.026526
+1995-01-01  0.028403
+1995-04-01  0.030932
+1995-07-01  0.026410
+1995-10-01  0.026509
+1996-01-01  0.027397
+1996-04-01  0.028471
+1996-07-01  0.029437
+1996-10-01  0.031901
+1997-01-01  0.029462
+                 CPI
+real date           
+2018-10-01  0.022031
+2019-01-01  0.016449
+2019-04-01  0.018114
+2019-07-01  0.017575
+2019-10-01  0.020329
+2020-01-01  0.021187
+2020-04-01  0.003643
+2020-07-01  0.012224
+2020-10-01  0.012395
+2021-01-01  0.018985
+(126, 1)
+----
+
+
++*In[43]:*+
+[source, ipython3]
+----
+# view the Prices DF as I want to merge the inflation with it
+print(Prices.head())
+print(Prices.shape)
+print(df_inflation_adj.head(50))
+
+----
+
+
++*Out[43]:*+
+----
+            GOOG      AAPL  FB  BABA  AMZN        GE      AMD       WMT  \
+date                                                                      
+1994-06-14   NaN  0.388874 NaN   NaN   NaN  2.516703  13.4375  8.353536   
+1994-06-15   NaN  0.399651 NaN   NaN   NaN  2.490487  13.2500  8.269581   
+1994-06-16   NaN  0.378995 NaN   NaN   NaN  2.516703  13.0000  8.353536   
+1994-06-17   NaN  0.380791 NaN   NaN   NaN  2.503596  13.0000  8.101673   
+1994-06-20   NaN  0.389772 NaN   NaN   NaN  2.483935  12.7500  8.227605   
+
+                 BAC  GM  ...  UAA  SHLD       XOM       RRC       BBY  MA  \
+date                      ...                                                
+1994-06-14  4.173676 NaN  ...  NaN   NaN  4.922016  4.539053  2.213694 NaN   
+1994-06-15  4.145600 NaN  ...  NaN   NaN  4.765262  4.612259  2.265659 NaN   
+1994-06-16  4.061380 NaN  ...  NaN   NaN  4.922016  4.831892  2.244874 NaN   
+1994-06-17  4.005231 NaN  ...  NaN   NaN  4.911565  4.685468  2.307230 NaN   
+1994-06-20  3.939724 NaN  ...  NaN   NaN  4.901114  4.612259  2.369589 NaN   
+
+                 PFE       JPM      SBUX   Yield  
+date                                              
+1994-06-14  1.623517  4.911616  0.749798  0.0514  
+1994-06-15  1.623517  4.911616  0.749798  0.0519  
+1994-06-16  1.617187  4.911616  0.759411  0.0515  
+1994-06-17  1.620351  4.850791  0.759411  0.0520  
+1994-06-20  1.617187  4.789968  0.730573  0.0524  
+
+[5 rows x 21 columns]
+(6000, 21)
+                 CPI
+real date           
+1989-10-01  0.045983
+1990-01-01  0.052329
+1990-04-01  0.045822
+1990-07-01  0.055348
+1990-10-01  0.062235
+1991-01-01  0.052851
+1991-04-01  0.048454
+1991-07-01  0.038764
+1991-10-01  0.029918
+1992-01-01  0.028684
+1992-04-01  0.030973
+1992-07-01  0.030976
+1992-10-01  0.030501
+1993-01-01  0.031971
+1993-04-01  0.031474
+1993-07-01  0.027443
+1993-10-01  0.027249
+1994-01-01  0.025157
+1994-04-01  0.023810
+1994-07-01  0.028782
+1994-10-01  0.026526
+1995-01-01  0.028403
+1995-04-01  0.030932
+1995-07-01  0.026410
+1995-10-01  0.026509
+1996-01-01  0.027397
+1996-04-01  0.028471
+1996-07-01  0.029437
+1996-10-01  0.031901
+1997-01-01  0.029462
+1997-04-01  0.023424
+1997-07-01  0.022029
+1997-10-01  0.018717
+1998-01-01  0.014623
+1998-04-01  0.016022
+1998-07-01  0.015959
+1998-10-01  0.015483
+1999-01-01  0.016677
+1999-04-01  0.021094
+1999-07-01  0.023460
+1999-10-01  0.026225
+2000-01-01  0.032402
+2000-04-01  0.033293
+2000-07-01  0.035081
+2000-10-01  0.034271
+2001-01-01  0.033935
+2001-04-01  0.033773
+2001-07-01  0.026959
+2001-10-01  0.018579
+2002-01-01  0.012521
+----
+
+
++*In[44]:*+
+[source, ipython3]
+----
+# merge the CPI DF with the Prices
+# i start the data at the CPI date before the Price data starts. Then forward fill the CPI, remove row 0 and then drop
+# all columns with NAs
+
+df_p_cpi = pd.merge(Prices, df_inflation_adj.iloc[18:,:], how='outer', left_index=True, right_index=True)
+df_p_cpi = df_p_cpi.fillna(method='ffill')
+df_p_cpi = df_p_cpi.iloc[1:, :]
+df_p_cpi_trim = df_p_cpi.dropna(axis=1)
+
+print(df_p_cpi_trim.head(30))
+print(df_p_cpi_trim.tail(30))
+
+----
+
+
++*Out[44]:*+
+----
+                AAPL        GE      AMD       WMT       BAC         T  \
+1994-06-14  0.388874  2.516703  13.4375  8.353536  4.173676  6.693104   
+1994-06-15  0.399651  2.490487  13.2500  8.269581  4.145600  6.693104   
+1994-06-16  0.378995  2.516703  13.0000  8.353536  4.061380  6.751641   
+1994-06-17  0.380791  2.503596  13.0000  8.101673  4.005231  6.712616   
+1994-06-20  0.389772  2.483935  12.7500  8.227605  3.939724  6.693104   
+1994-06-21  0.373607  2.418394  12.3750  8.017714  3.939724  6.693104   
+1994-06-22  0.377199  2.398733  12.8750  8.143649  4.014589  6.654077   
+1994-06-23  0.361033  2.424950  12.3125  8.143649  3.967800  6.712616   
+1994-06-24  0.367992  2.424950  12.1875  7.891781  3.836785  6.595536   
+1994-06-27  0.377199  2.483935  12.7500  8.059691  3.930367  6.556511   
+1994-06-28  0.384384  2.595522  13.0625  8.143649  3.846144  6.556511   
+1994-06-29  0.375403  2.616121  13.2500  8.269581  3.930367  6.732130   
+1994-06-30  0.380791  2.561191  12.5000  8.143649  3.846144  6.790673   
+1994-07-01  0.370014  2.547457  13.0000  8.269581  3.874218  6.836777   
+1994-07-05  0.380791  2.581789  12.9375  8.143649  3.836785  6.797029   
+1994-07-06  0.375403  2.595522  12.5000  8.017714  3.921008  6.876525   
+1994-07-07  0.385282  2.602390  13.1875  8.311559  3.930367  6.896400   
+1994-07-08  0.388874  2.602390  13.3750  8.185626  3.958440  6.975902   
+1994-07-11  0.387976  2.595522  13.5000  8.101673  3.958440  6.936151   
+1994-07-12  0.407734  2.574924  13.3750  8.311559  3.949082  6.816905   
+1994-07-13  0.426594  2.574924  13.2500  8.395516  3.967800  6.777157   
+1994-07-14  0.411327  2.616121  13.0000  8.395516  4.080094  6.956025   
+1994-07-15  0.405938  2.629854  12.6875  8.479470  4.080094  6.956025   
+1994-07-18  0.407734  2.629854  12.7500  8.689354  4.126884  6.995774   
+1994-07-19  0.397855  2.684786  12.3750  8.647380  4.117527  6.995774   
+1994-07-20  0.382588  2.677920  12.3125  8.563426  4.014589  6.896400   
+1994-07-21  0.402346  2.664187  12.9375  8.647380  4.033305  6.876525   
+1994-07-22  0.445454  2.725983  12.9375  8.521448  4.023946  6.816905   
+1994-07-25  0.455333  2.739717  12.7500  8.395516  4.061380  6.777157   
+1994-07-26  0.450842  2.698518  12.8125  8.437493  4.098811  6.797029   
+
+                 XOM       RRC       BBY       PFE       JPM      SBUX  \
+1994-06-14  4.922016  4.539053  2.213694  1.623517  4.911616  0.749798   
+1994-06-15  4.765262  4.612259  2.265659  1.623517  4.911616  0.749798   
+1994-06-16  4.922016  4.831892  2.244874  1.617187  4.911616  0.759411   
+1994-06-17  4.911565  4.685468  2.307230  1.620351  4.850791  0.759411   
+1994-06-20  4.901114  4.612259  2.369589  1.617187  4.789968  0.730573   
+1994-06-21  4.848865  4.612259  2.286445  1.617187  4.713934  0.724164   
+1994-06-22  4.869765  4.758684  2.317624  1.591869  4.759553  0.724164   
+1994-06-23  4.859315  4.758684  2.265659  1.598199  4.729141  0.685713   
+1994-06-24  4.786162  4.612259  2.296838  1.569716  4.668317  0.685713   
+1994-06-27  4.775712  4.685468  2.328016  1.572880  4.759553  0.692121   
+1994-06-28  4.733914  4.612259  2.328016  1.563386  4.744348  0.669692   
+1994-06-29  4.723462  4.758684  2.421552  1.595034  4.808921  0.647262   
+1994-06-30  4.744364  4.612259  2.400768  1.598199  4.824583  0.647262   
+1994-07-01  4.775712  4.758684  2.390374  1.588703  4.871577  0.640853   
+1994-07-05  4.754814  4.685468  2.431945  1.585539  4.808921  0.640853   
+1994-07-06  4.744364  4.831892  2.379982  1.566551  4.777593  0.656874   
+1994-07-07  4.796614  4.685468  2.109765  1.576045  4.824583  0.634445   
+1994-07-08  4.838416  4.831892  2.068194  1.591869  4.793257  0.647262   
+1994-07-11  4.890666  4.831892  2.026621  1.601363  4.808921  0.612015   
+1994-07-12  4.880216  4.831892  2.026621  1.569716  4.793257  0.634445   
+1994-07-13  4.859315  4.978316  1.995443  1.569716  4.793257  0.660079   
+1994-07-14  4.838416  5.197944  1.974657  1.588703  4.902907  0.701734   
+1994-07-15  4.848865  5.197944  1.964265  1.588703  4.840250  0.714551   
+1994-07-18  4.869765  5.124730  2.026621  1.579209  4.855915  0.695325   
+1994-07-19  4.890666  5.051522  2.005836  1.572880  4.808921  0.685713   
+1994-07-20  4.890666  5.051522  1.891514  1.522245  4.714937  0.711347   
+1994-07-21  4.880216  5.124730  1.943478  1.531739  4.746265  0.724164   
+1994-07-22  4.838416  5.197944  1.953871  1.519080  4.746265  0.733777   
+1994-07-25  4.869765  5.417576  1.891514  1.560221  4.793257  0.736981   
+1994-07-26  4.869765  5.271154  1.829156  1.560221  4.793257  0.762615   
+
+             Yield       CPI  
+1994-06-14  0.0514  0.023810  
+1994-06-15  0.0519  0.023810  
+1994-06-16  0.0515  0.023810  
+1994-06-17  0.0520  0.023810  
+1994-06-20  0.0524  0.023810  
+1994-06-21  0.0531  0.023810  
+1994-06-22  0.0528  0.023810  
+1994-06-23  0.0529  0.023810  
+1994-06-24  0.0537  0.023810  
+1994-06-27  0.0537  0.023810  
+1994-06-28  0.0548  0.023810  
+1994-06-29  0.0547  0.023810  
+1994-06-30  0.0551  0.023810  
+1994-07-01  0.0550  0.028782  
+1994-07-05  0.0548  0.028782  
+1994-07-06  0.0546  0.028782  
+1994-07-07  0.0545  0.028782  
+1994-07-08  0.0558  0.028782  
+1994-07-11  0.0561  0.028782  
+1994-07-12  0.0555  0.028782  
+1994-07-13  0.0552  0.028782  
+1994-07-14  0.0538  0.028782  
+1994-07-15  0.0537  0.028782  
+1994-07-18  0.0534  0.028782  
+1994-07-19  0.0530  0.028782  
+1994-07-20  0.0540  0.028782  
+1994-07-21  0.0550  0.028782  
+1994-07-22  0.0553  0.028782  
+1994-07-25  0.0553  0.028782  
+1994-07-26  0.0553  0.028782  
+                  AAPL     GE    AMD        WMT        BAC          T  \
+2018-03-16  178.020004  14.31  11.47  89.169998  32.169998  36.480774   
+2018-03-19  175.300003  14.07  11.43  87.449997  31.980000  36.066669   
+2018-03-20  175.240005  13.64  11.11  87.949997  31.980000  35.830036   
+2018-03-21  171.270004  13.88  11.26  88.180000  31.870001  35.494808   
+2018-03-22  168.850006  13.35  10.91  87.139999  30.549999  34.873646   
+2018-03-23  164.940002  13.07  10.63  85.419998  29.170000  34.213051   
+2018-03-26  172.770004  12.89  10.44  87.500000  30.440001  34.203190   
+2018-03-27  168.339996  13.44  10.00  86.050003  29.520000  34.410244   
+2018-03-28  166.479996  13.68   9.81  87.769997  29.389999  35.060982   
+2018-03-29  167.779999  13.48  10.05  88.970001  29.990000  35.149719   
+2018-04-01  167.779999  13.48  10.05  88.970001  29.990000  35.149719   
+2018-04-02  166.679993  13.12   9.53  85.550003  29.309999  34.607437   
+2018-04-03  168.389999  13.13   9.55  86.800003  29.590000  34.873646   
+2018-04-04  171.610001  13.28   9.77  87.220001  29.879999  35.376492   
+2018-04-05  172.800003  13.43  10.02  87.809998  30.320000  35.632843   
+2018-04-06  168.380005  13.06   9.61  86.690002  29.629999  35.130001   
+2018-04-09  170.050003  12.83   9.53  86.279999  29.870001  35.169998   
+2018-04-10  173.250000  13.05   9.98  86.449997  30.480000  35.810001   
+2018-04-11  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2018-07-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2018-10-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2019-01-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2019-04-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2019-07-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2019-10-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2020-01-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2020-04-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2020-07-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2020-10-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+2021-01-01  172.440002  12.97   9.82  85.910004  29.900000  35.250000   
+
+                  XOM    RRC        BBY        PFE         JPM       SBUX  \
+2018-03-16  75.120003  15.11  69.281998  36.779999  114.857552  59.000000   
+2018-03-19  74.150002  14.66  68.089699  36.330002  113.952141  58.299999   
+2018-03-20  73.989998  14.31  69.590004  36.330002  114.061584  58.660000   
+2018-03-21  75.040001  15.40  68.440002  36.270000  114.161079  58.470001   
+2018-03-22  73.500000  15.13  67.250000  35.599998  109.395248  57.770000   
+2018-03-23  72.889999  14.65  66.680000  34.490002  106.470085  56.310001   
+2018-03-26  74.000000  15.12  69.510002  35.040001  109.753433  57.799999   
+2018-03-27  73.699997  14.30  67.739998  35.009998  107.624229  57.459999   
+2018-03-28  72.809998  14.34  68.559998  35.299999  107.455086  57.900002   
+2018-03-29  74.610001  14.54  69.989998  35.490002  109.415154  57.889999   
+2018-04-01  74.610001  14.54  69.989998  35.490002  109.415154  57.889999   
+2018-04-02  73.220001  13.74  68.919998  35.049999  107.305847  56.240002   
+2018-04-03  75.019997  13.95  70.339996  35.680000  108.778381  58.000000   
+2018-04-04  74.870003  13.78  72.860001  36.130001  110.430000  58.830002   
+2018-04-05  76.019997  14.52  72.120003  35.730000  111.879997  59.139999   
+2018-04-06  74.870003  13.97  70.489998  35.169998  109.089996  58.340000   
+2018-04-09  74.870003  13.93  69.820000  35.459999  110.400002  58.700001   
+2018-04-10  77.070000  14.78  71.720001  35.950001  112.510002  59.410000   
+2018-04-11  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2018-07-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2018-10-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2019-01-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2019-04-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2019-07-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2019-10-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2020-01-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2020-04-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2020-07-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2020-10-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+2021-01-01  77.430000  14.99  70.910004  35.790001  110.620003  59.419998   
+
+             Yield       CPI  
+2018-03-16  0.0208  0.022142  
+2018-03-19  0.0208  0.022142  
+2018-03-20  0.0208  0.022142  
+2018-03-21  0.0206  0.022142  
+2018-03-22  0.0205  0.022142  
+2018-03-23  0.0204  0.022142  
+2018-03-26  0.0206  0.022142  
+2018-03-27  0.0210  0.022142  
+2018-03-28  0.0212  0.022142  
+2018-03-29  0.0209  0.022142  
+2018-04-01  0.0209  0.027119  
+2018-04-02  0.0208  0.027119  
+2018-04-03  0.0209  0.027119  
+2018-04-04  0.0207  0.027119  
+2018-04-05  0.0207  0.027119  
+2018-04-06  0.0206  0.027119  
+2018-04-09  0.0208  0.027119  
+2018-04-10  0.0209  0.027119  
+2018-04-11  0.0209  0.027119  
+2018-07-01  0.0209  0.026409  
+2018-10-01  0.0209  0.022031  
+2019-01-01  0.0209  0.016449  
+2019-04-01  0.0209  0.018114  
+2019-07-01  0.0209  0.017575  
+2019-10-01  0.0209  0.020329  
+2020-01-01  0.0209  0.021187  
+2020-04-01  0.0209  0.003643  
+2020-07-01  0.0209  0.012224  
+2020-10-01  0.0209  0.012395  
+2021-01-01  0.0209  0.018985  
+----
+
+
++*In[45]:*+
+[source, ipython3]
+----
+# takes a list of returns and a list of weights and simply returns the annual return and annual volatility 
+
+def ReturnVolFromDF(returns, weights):
+    ret_list = []
+    for i in range(returns.shape[0]):
+        ret_ = 0
+        for j in range(returns.shape[1]):
+            ret_ = (returns.iloc[i,j] * weights[j]) + ret_
+        ret_list.append(ret_)
+    
+    ret_c = 1
+    
+    for val in ret_list:
+        ret_c = ret_c * (1+val)
+    ret_c = ret_c - 1
+    
+    vol_ = np.std(ret_list)    
+    a_vol_ = vol_ * np.sqrt(252)
+    
+    return ret_c, a_vol_
+----
+
+
++*In[46]:*+
+[source, ipython3]
+----
+portfolioColumns = ['startDate', 'endDate', 'average_T_Yield', 'average_CPI', 'volatility', 'return']
+----
+
+
++*In[47]:*+
+[source, ipython3]
+----
+# creates sample portfolios by randomly assigning weights to each stock in the DF
+# the portfolios are all created on an annual basis starting at various points in time
+# there is a debug mode on this function
+
+
+def createSamplePortfolios(df_prices, df_returns, stock_number, days,\
+                           number_of_samples, deBugMode = False, evenlyWeighted = False):
+
+    possible_start_row = df_prices.shape[0]-1-days
+    df_randPorts = pd.DataFrame(columns = portfolioColumns)
+    
+
+    for i in range(number_of_samples):
+        start_row = random.randint(1, possible_start_row)
+        end_row = start_row + days
+        start_date = df_prices.index[start_row]
+        end_date = df_prices.index[end_row-1]
+        t_yield = df_prices[['Yield']].iloc[start_row:end_row,:].mean()[0]
+        av_cpi = df_prices[['CPI']].iloc[start_row:end_row,:].mean()[0]
+
+        weight_list = []
+        weight_list_1 = []
+        total = 0
+
+        
+        if evenlyWeighted == False:
+            
+            weight_list_1 = randomWeights(stock_number, positive = True)
+            
+            if deBugMode == True:
+                print(weight_list_1)
+        else:
+            for j in range(stock_number):
+                weight_list_1.append(float(1/stock_number))
+                
+                
+        df_r = df_returns.iloc[start_row:end_row,0:stock_number]
+        
+        if deBugMode == True:
+            print(df_r)
+    
+        ret_, vol = ReturnVolFromDF(df_r, weight_list_1)
+        
+        to_append = [start_date, end_date, t_yield, av_cpi, vol, ret_]
+        a_series = pd.Series(to_append, index = df_randPorts.columns)
+        df_randPorts = df_randPorts.append(a_series, ignore_index=True)
+
+    return df_randPorts
+----
+
+
++*In[48]:*+
+[source, ipython3]
+----
+# this create the data set we will use for our regression
+
+days = 252
+number_of_samples = 10000
+deBugMode = False
+stocks = 12
+evenlyWeighted = False
+
+df_p_cpi_trim_ret = df_p_cpi_trim.pct_change()
+
+df_samples = createSamplePortfolios\
+(df_p_cpi_trim, df_p_cpi_trim_ret, stocks, days, number_of_samples, deBugMode, evenlyWeighted)
+
+print(df_samples.head())
+----
+
+
++*Out[48]:*+
+----
+   startDate    endDate  average_T_Yield  average_CPI  volatility    return
+0 2000-02-15 2001-02-07         0.059688     0.033948    0.312470  0.193170
+1 2005-09-08 2006-08-31         0.046811     0.037210    0.145668  0.188665
+2 2007-10-02 2008-09-29         0.024911     0.044391    0.337614 -0.250013
+3 2004-05-12 2005-05-10         0.025483     0.029992    0.138481  0.349583
+4 1997-10-22 1998-10-20         0.052511     0.016156    0.280274  0.241809
+----
+
+
++*In[49]:*+
+[source, ipython3]
+----
+# performs linear regression on the dataset
+
+def performLinearReg(X_series, Y_series, testSize, randomState, cv_val):
+
+    X = X_series.to_numpy()
+    Y = Y_series.to_numpy()
+
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = testSize, random_state = randomState)
+
+    reg = LinearRegression()
+    reg.fit(X_train, Y_train)
+    Y_pred = reg.predict(X_test)
+    
+    cv_results = cross_val_score(reg, X, Y, cv=cv_val)
+    cv_average = cv_results.mean()
+    r_sq = reg.score(X_test, Y_test)
+    
+    return r_sq, cv_average
+----
+
+
++*In[50]:*+
+[source, ipython3]
+----
+# Using the Linear Reg model to try and predict a portfolio return using it's volatility, along with CPI and Treasury Yield
+
+X = df_samples[['volatility', 'average_T_Yield', 'average_CPI']]
+Y = df_samples['return']
+
+linear_r_squared, average_r_squared = performLinearReg(X, Y, 0.3, 42, 5)
+
+print('Linear Regression R-Squared : %s' % round(linear_r_squared,5))
+print('The average R-Squared when CV = 5 is %s' % round(average_r_squared,5))
+----
+
+
++*Out[50]:*+
+----
+Linear Regression R-Squared : -5.74286
+The average R-Squared when CV = 5 is -757.96561
+----
+
+
++*In[51]:*+
+[source, ipython3]
+----
+# performs Ridge regression on the dataset
+
+def performRidgeReg(X_series, Y_series, testSize, randomState, alphaVal = 1, normalizeBool = True):
+
+    X = X_series.to_numpy()
+    Y = Y_series.to_numpy()
+    
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = testSize, random_state=randomState)
+    ridge = Ridge(alpha=alphaVal, normalize=normalizeBool)
+    ridge.fit(X_train, Y_train)
+    ridge_pred = ridge.predict(X_test)
+    return ridge.score(X_test, Y_test)
+----
+
+
++*In[52]:*+
+[source, ipython3]
+----
+# Using the Ridge Reg model to try and predict a portfolio return using it's volatility, along with CPI and Treasury Yield
+
+ridge_r_squared = performRidgeReg(X, Y, 0.3, 42, 0.1, True)
+print("Ridge Regression R-Squared : %s" % ridge_r_squared)
+----
+
+
++*Out[52]:*+
+----
+Ridge Regression R-Squared : -3.0349044384324166
+----
+
+
++*In[53]:*+
+[source, ipython3]
+----
+#selecting alpha values between 0 and 10 to see what fits the data best
+
+param_grid = {'alpha' :np.linspace(0,10,50)}
+ridge = Ridge(normalize=True)
+ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
+ridge_cv.fit(X,Y)
+
+print(ridge_cv.best_params_)
+print(ridge_cv.best_score_)
+----
+
+
++*Out[53]:*+
+----
+{'alpha': 2.4489795918367347}
+-57.86646624931414
+----
+
+
++*In[54]:*+
+[source, ipython3]
+----
+# this create the data set we will use for our regression. Similar to df_samples, but here the weights won't be random,
+# the portfolios will be evenly weighted (EW) 
+
+days = 252
+number_of_samples = 10000
+deBugMode = False
+stocks = 12
+evenlyWeighted = True
+
+df_p_cpi_trim_ret = df_p_cpi_trim.pct_change()
+
+df_samples_EW = createSamplePortfolios\
+(df_p_cpi_trim, df_p_cpi_trim_ret, stocks, days, number_of_samples, deBugMode, evenlyWeighted)
+
+print(df_samples_EW)
+----
+
+
++*Out[54]:*+
+----
+   startDate    endDate  average_T_Yield  average_CPI  volatility    return
+0 2002-12-17 2003-12-15         0.012469     0.022819    0.193783  0.375709
+1 1998-09-08 1999-09-03         0.047343     0.018668    0.274181  0.699748
+2 1995-05-08 1996-04-30         0.054793     0.027558    0.142379  0.343077
+3 2011-08-24 2012-08-16         0.001517     0.026518    0.223339  0.252258
+4 1995-09-11 1996-09-04         0.054883     0.027754    0.161998  0.165815
+5 2000-02-17 2001-02-09         0.059569     0.033960    0.267052  0.257123
+6 1999-11-05 2000-10-27         0.060947     0.032508    0.261898  0.180342
+7 1995-03-17 1996-03-08         0.055940     0.027863    0.137242  0.310374
+8 1996-03-12 1997-03-07         0.056189     0.029713    0.158287  0.435039
+9 1997-04-21 1998-04-17         0.055170     0.019357    0.206036  0.792265
+----
+
+
++*In[55]:*+
+[source, ipython3]
+----
+# Using the Linear Reg model to try and predict a portfolio return using it's volatility, along with CPI and Treasury Yield
+
+X = df_samples_EW[['volatility', 'average_T_Yield', 'average_CPI']]
+Y = df_samples_EW['return']
+
+linear_r_squared, average_r_squared  = performLinearReg(X, Y, 0.3, 42, 5)
+
+print('Linear Regression R-Squared : %s' % round(linear_r_squared,5))
+print('The average R-Squared when CV = 5 is %s' % round(average_r_squared,5))
+----
+
+
++*Out[55]:*+
+----
+Linear Regression R-Squared : -0.05567
+The average R-Squared when CV = 5 is -2.796
+----
+
+
++*In[56]:*+
+[source, ipython3]
+----
+# Using the Ridge Reg model to try and predict a portfolio return using it's volatility, along with CPI and Treasury Yield
+
+ridge_r_squared = performRidgeReg(X, Y, 0.3, 42, 0.1, True)
+print("Ridge Regression R-Squared : %s" % ridge_r_squared)
+----
+
+
++*Out[56]:*+
+----
+Ridge Regression R-Squared : 0.23364037931133896
+----
+
+
++*In[57]:*+
+[source, ipython3]
+----
+#selecting alpha values between 0 and 10 to see what fits the data best
+
+param_grid = {'alpha' :np.linspace(0,10,50)}
+ridge = Ridge(normalize=True)
+ridge_cv = GridSearchCV(ridge, param_grid, cv=5)
+ridge_cv.fit(X,Y)
+
+print(ridge_cv.best_params_)
+print(ridge_cv.best_score_)
+----
+
+
++*Out[57]:*+
+----
+{'alpha': 0.20408163265306123}
+-2.338353614291277
+----
+
+
++*In[58]:*+
+[source, ipython3]
+----
+ax = df_samples.plot.scatter(x='volatility',
+                      y='return')
+----
+
+
++*Out[58]:*+
+----
+*c* argument looks like a single numeric RGB or RGBA sequence, which should be avoided as value-mapping will have precedence in case its length matches with *x* & *y*.  Please use the *color* keyword-argument or provide a 2-D array with a single row if you intend to specify the same RGB or RGBA value for all points.
+
+![png](output_56_1.png)
+----
+
+
++*In[59]:*+
+[source, ipython3]
+----
+ax = df_samples_EW.plot.scatter(x='volatility',
+                      y='return')
+----
+
+
++*Out[59]:*+
+----
+*c* argument looks like a single numeric RGB or RGBA sequence, which should be avoided as value-mapping will have precedence in case its length matches with *x* & *y*.  Please use the *color* keyword-argument or provide a 2-D array with a single row if you intend to specify the same RGB or RGBA value for all points.
+
+![png](output_57_1.png)
+----
+
+
++*In[61]:*+
+[source, ipython3]
+----
+df_players = pd.read_csv(r"C:\Users\Cillian\PyPortfolioOpt\tests\resources\players_15.csv")
+print(df_players.head(50))
+print(df_players.tail(10))
+print(df_players.shape)
+----
+
+
++*Out[61]:*+
+----
+    sofifa_id                                         player_url  \
+0      158023  https://sofifa.com/player/158023/lionel-messi/...   
+1       20801  https://sofifa.com/player/20801/c-ronaldo-dos-...   
+2        9014  https://sofifa.com/player/9014/arjen-robben/15...   
+3       41236  https://sofifa.com/player/41236/zlatan-ibrahim...   
+4      167495  https://sofifa.com/player/167495/manuel-neuer/...   
+5      176580  https://sofifa.com/player/176580/luis-suarez/1...   
+6      183277  https://sofifa.com/player/183277/eden-hazard/1...   
+7        7826  https://sofifa.com/player/7826/robin-van-persi...   
+8      121944  https://sofifa.com/player/121944/bastian-schwe...   
+9      156616  https://sofifa.com/player/156616/franck-ribery...   
+10     167397  https://sofifa.com/player/167397/radamel-falca...   
+11     173731  https://sofifa.com/player/173731/gareth-bale/1...   
+12     188545  https://sofifa.com/player/188545/robert-lewand...   
+13     121939  https://sofifa.com/player/121939/philipp-lahm/...   
+14     155862  https://sofifa.com/player/155862/sergio-ramos-...   
+15     164240  https://sofifa.com/player/164240/thiago-emilia...   
+16     168542  https://sofifa.com/player/168542/david-josue-j...   
+17     177003  https://sofifa.com/player/177003/luka-modric/1...   
+18     198710  https://sofifa.com/player/198710/james-rodrigu...   
+19     190871  https://sofifa.com/player/190871/neymar-da-sil...   
+20     192119  https://sofifa.com/player/192119/thibaut-court...   
+21     178603  https://sofifa.com/player/178603/mats-hummels/...   
+22     183898  https://sofifa.com/player/183898/angel-di-mari...   
+23     188350  https://sofifa.com/player/188350/marco-reus/15...   
+24     189596  https://sofifa.com/player/189596/thomas-muller...   
+25     153079  https://sofifa.com/player/153079/sergio-aguero...   
+26     176635  https://sofifa.com/player/176635/mesut-ozil/15...   
+27      10535  https://sofifa.com/player/10535/xavier-hernand...   
+28      20289  https://sofifa.com/player/20289/yaya-toure/15/...   
+29      54050  https://sofifa.com/player/54050/wayne-rooney/1...   
+30     139720  https://sofifa.com/player/139720/vincent-kompa...   
+31     192318  https://sofifa.com/player/192318/mario-gotze/1...   
+32     189511  https://sofifa.com/player/189511/sergio-busque...   
+33     182521  https://sofifa.com/player/182521/toni-kroos/15...   
+34     165153  https://sofifa.com/player/165153/karim-benzema...   
+35     179813  https://sofifa.com/player/179813/edinson-cavan...   
+36     179844  https://sofifa.com/player/179844/diego-da-silv...   
+37     181872  https://sofifa.com/player/181872/arturo-vidal/...   
+38     167948  https://sofifa.com/player/167948/hugo-lloris/1...   
+39     177610  https://sofifa.com/player/177610/javier-martin...   
+40     178088  https://sofifa.com/player/178088/juan-manuel-m...   
+41     183907  https://sofifa.com/player/183907/jerome-boaten...   
+42      48940  https://sofifa.com/player/48940/petr-cech/15/1...   
+43     143001  https://sofifa.com/player/143001/carlos-tevez/...   
+44     152729  https://sofifa.com/player/152729/gerard-pique-...   
+45     143745  https://sofifa.com/player/143745/arda-turan/15...   
+46     184941  https://sofifa.com/player/184941/alexis-sanche...   
+47     188152  https://sofifa.com/player/188152/oscar-dos-san...   
+48     165239  https://sofifa.com/player/165239/samir-nasri/1...   
+49     177509  https://sofifa.com/player/177509/mehdi-benatia...   
+
+           short_name                            long_name  age         dob  \
+0            L. Messi       Lionel Andrés Messi Cuccittini   27  1987-06-24   
+1   Cristiano Ronaldo  Cristiano Ronaldo dos Santos Aveiro   29  1985-02-05   
+2           A. Robben                         Arjen Robben   30  1984-01-23   
+3      Z. Ibrahimović                   Zlatan Ibrahimović   32  1981-10-03   
+4            M. Neuer                         Manuel Neuer   28  1986-03-27   
+5           L. Suárez             Luis Alberto Suárez Díaz   27  1987-01-24   
+6           E. Hazard                          Eden Hazard   23  1991-01-07   
+7       R. van Persie                     Robin van Persie   30  1983-08-06   
+8   B. Schweinsteiger               Bastian Schweinsteiger   29  1984-08-01   
+9           F. Ribéry                  Franck Bilal Ribéry   31  1983-04-07   
+10             Falcao         Radamel Falcao García Zárate   28  1986-02-10   
+11            G. Bale                    Gareth Frank Bale   24  1989-07-16   
+12     R. Lewandowski                   Robert Lewandowski   25  1988-08-21   
+13            P. Lahm                         Philipp Lahm   30  1983-11-11   
+14       Sergio Ramos                  Sergio Ramos García   28  1986-03-30   
+15       Thiago Silva             Thiago Emiliano da Silva   29  1984-09-22   
+16        David Silva            David Josué Jiménez Silva   28  1986-01-08   
+17          L. Modrić                          Luka Modrić   28  1985-09-09   
+18       J. Rodríguez          James David Rodríguez Rubio   22  1991-07-12   
+19             Neymar        Neymar da Silva Santos Junior   22  1992-02-05   
+20        T. Courtois                     Thibaut Courtois   22  1992-05-11   
+21         M. Hummels                        Mats  Hummels   25  1988-12-16   
+22        A. Di María      Ángel Fabián Di María Hernández   26  1988-02-14   
+23            M. Reus                           Marco Reus   25  1989-05-31   
+24          T. Müller                        Thomas Müller   24  1989-09-13   
+25          S. Agüero    Sergio Leonel Agüero del Castillo   26  1988-06-02   
+26            M. Özil                           Mesut Özil   25  1988-10-15   
+27               Xavi               Xavier Hernández Creus   34  1980-01-25   
+28           Y. Touré                  Gnégnéri Yaya Touré   31  1983-05-13   
+29          W. Rooney                    Wayne Mark Rooney   28  1985-10-24   
+30         V. Kompany                      Vincent Kompany   28  1986-04-10   
+31           M. Götze                          Mario Götze   22  1992-06-03   
+32    Sergio Busquets             Sergio Busquets i Burgos   25  1988-07-16   
+33           T. Kroos                           Toni Kroos   24  1990-01-04   
+34         K. Benzema                        Karim Benzema   26  1987-12-19   
+35          E. Cavani         Edinson Roberto Cavani Gómez   27  1987-02-14   
+36        Diego Costa                 Diego da Silva Costa   25  1988-10-07   
+37           A. Vidal                         Arturo Vidal   27  1987-05-22   
+38          H. Lloris                          Hugo Lloris   27  1986-12-26   
+39      Javi Martinez              Javier Martínez Aginaga   25  1988-09-02   
+40          Juan Mata              Juan Manuel Mata García   26  1988-04-28   
+41         J. Boateng                       Jérôme Boateng   25  1988-09-03   
+42            P. Čech                            Petr Čech   32  1982-05-20   
+43           C. Tévez                 Carlos Alberto Tevez   30  1984-02-05   
+44              Piqué                Gerard Piqué Bernabéu   27  1987-02-02   
+45           A. Turan                           Arda Turan   27  1987-01-30   
+46         A. Sánchez     Alexis Alejandro Sánchez Sánchez   25  1988-12-19   
+47              Oscar      Oscar dos Santos Emboaba Júnior   22  1991-09-09   
+48           S. Nasri                          Samir Nasri   27  1987-06-26   
+49         M. Benatia      Medhi Amine El Mouttaqi Benatia   27  1987-04-17   
+
+    height_cm  weight_kg     nationality                 club  ...   lwb  \
+0         169         67       Argentina         FC Barcelona  ...  62+3   
+1         185         80        Portugal          Real Madrid  ...  63+3   
+2         180         80     Netherlands    FC Bayern München  ...  64+3   
+3         195         95          Sweden  Paris Saint-Germain  ...  61+3   
+4         193         92         Germany    FC Bayern München  ...   NaN   
+5         181         81         Uruguay         FC Barcelona  ...  67+3   
+6         173         74         Belgium              Chelsea  ...  62+2   
+7         187         71     Netherlands    Manchester United  ...  60+3   
+8         183         79         Germany    FC Bayern München  ...  81+2   
+9         170         72          France    FC Bayern München  ...  63+2   
+10        177         72        Colombia    Manchester United  ...  58+2   
+11        183         74           Wales          Real Madrid  ...  76+2   
+12        184         78          Poland    FC Bayern München  ...  61+2   
+13        170         66         Germany    FC Bayern München  ...  88+2   
+14        183         75           Spain          Real Madrid  ...  81+2   
+15        183         79          Brazil  Paris Saint-Germain  ...  81+2   
+16        170         67           Spain      Manchester City  ...  63+2   
+17        174         65         Croatia          Real Madrid  ...  81+2   
+18        180         75        Colombia          Real Madrid  ...  64+2   
+19        175         64          Brazil         FC Barcelona  ...  61+3   
+20        199         88         Belgium              Chelsea  ...   NaN   
+21        192         90         Germany    Borussia Dortmund  ...  79+2   
+22        180         70       Argentina    Manchester United  ...  75+2   
+23        181         73         Germany    Borussia Dortmund  ...  64+1   
+24        186         75         Germany    FC Bayern München  ...  68+2   
+25        172         74       Argentina      Manchester City  ...  58+2   
+26        183         76         Germany              Arsenal  ...  59+1   
+27        170         68           Spain         FC Barcelona  ...  75+2   
+28        189         90     Ivory Coast      Manchester City  ...  81+2   
+29        176         83         England    Manchester United  ...  65+2   
+30        192         85         Belgium      Manchester City  ...  78+2   
+31        176         72         Germany    FC Bayern München  ...  63+1   
+32        189         73           Spain         FC Barcelona  ...  79+2   
+33        182         78         Germany          Real Madrid  ...  74+2   
+34        184         79          France          Real Madrid  ...  58+2   
+35        184         71         Uruguay  Paris Saint-Germain  ...  63+2   
+36        188         81           Spain              Chelsea  ...  60+1   
+37        180         75           Chile             Juventus  ...  83+2   
+38        188         78          France    Tottenham Hotspur  ...   NaN   
+39        190         81           Spain    FC Bayern München  ...  77+1   
+40        174         63           Spain    Manchester United  ...  61+1   
+41        192         90         Germany    FC Bayern München  ...  78+2   
+42        196         90  Czech Republic              Chelsea  ...   NaN   
+43        173         75       Argentina             Juventus  ...  69+1   
+44        192         85           Spain         FC Barcelona  ...  75+2   
+45        177         76          Turkey      Atlético Madrid  ...  74+1   
+46        171         62           Chile              Arsenal  ...  63+1   
+47        179         67          Brazil              Chelsea  ...  65+1   
+48        175         75          France      Manchester City  ...  65+1   
+49        188         88         Morocco    FC Bayern München  ...  75+0   
+
+     ldm   cdm   rdm   rwb    lb   lcb    cb   rcb    rb  
+0   62+3  62+3  62+3  62+3  54+3  45+3  45+3  45+3  54+3  
+1   63+3  63+3  63+3  63+3  57+3  52+3  52+3  52+3  57+3  
+2   64+3  64+3  64+3  64+3  55+3  46+3  46+3  46+3  55+3  
+3   65+3  65+3  65+3  61+3  56+3  55+3  55+3  55+3  56+3  
+4    NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+5   67+3  67+3  67+3  67+3  62+3  57+3  57+3  57+3  62+3  
+6   64+2  64+2  64+2  62+2  54+2  46+2  46+2  46+2  54+2  
+7   63+3  63+3  63+3  60+3  54+3  48+3  48+3  48+3  54+3  
+8   84+2  84+2  84+2  81+2  81+2  79+2  79+2  79+2  81+2  
+9   63+2  63+2  63+2  63+2  53+2  44+2  44+2  44+2  53+2  
+10  60+2  60+2  60+2  58+2  56+2  55+2  55+2  55+2  56+2  
+11  75+2  75+2  75+2  76+2  74+2  70+2  70+2  70+2  74+2  
+12  65+2  65+2  65+2  61+2  58+2  56+2  56+2  56+2  58+2  
+13  85+2  85+2  85+2  88+2  85+2  81+2  81+2  81+2  85+2  
+14  80+2  80+2  80+2  81+2  84+2  85+2  85+2  85+2  84+2  
+15  82+2  82+2  82+2  81+2  83+2  85+2  85+2  85+2  83+2  
+16  64+2  64+2  64+2  63+2  54+2  47+2  47+2  47+2  54+2  
+17  80+2  80+2  80+2  81+2  76+2  72+2  72+2  72+2  76+2  
+18  68+2  68+2  68+2  64+2  59+2  53+2  53+2  53+2  59+2  
+19  59+3  59+3  59+3  61+3  55+3  45+3  45+3  45+3  55+3  
+20   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+21  82+2  82+2  82+2  79+2  81+2  84+2  84+2  84+2  81+2  
+22  73+2  73+2  73+2  75+2  70+2  64+2  64+2  64+2  70+2  
+23  63+1  63+1  63+1  64+1  56+1  48+1  48+1  48+1  56+1  
+24  69+2  69+2  69+2  68+2  65+2  58+2  58+2  58+2  65+2  
+25  59+2  59+2  59+2  58+2  51+2  47+2  47+2  47+2  51+2  
+26  62+1  62+1  62+1  59+1  51+1  44+1  44+1  44+1  51+1  
+27  77+2  77+2  77+2  75+2  69+2  63+2  63+2  63+2  69+2  
+28  84+2  84+2  84+2  81+2  81+2  82+2  82+2  82+2  81+2  
+29  69+2  69+2  69+2  65+2  63+2  60+2  60+2  60+2  63+2  
+30  80+2  80+2  80+2  78+2  81+2  84+2  84+2  84+2  81+2  
+31  65+1  65+1  65+1  63+1  55+1  48+1  48+1  48+1  55+1  
+32  83+2  83+2  83+2  79+2  79+2  80+2  80+2  80+2  79+2  
+33  76+2  76+2  76+2  74+2  68+2  63+2  63+2  63+2  68+2  
+34  58+2  58+2  58+2  58+2  53+2  49+2  49+2  49+2  53+2  
+35  63+2  63+2  63+2  63+2  60+2  56+2  56+2  56+2  60+2  
+36  62+1  62+1  62+1  60+1  59+1  57+1  57+1  57+1  59+1  
+37  83+2  83+2  83+2  83+2  83+2  82+2  82+2  82+2  83+2  
+38   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+39  82+1  82+1  82+1  77+1  81+1  84+1  84+1  84+1  81+1  
+40  63+1  63+1  63+1  61+1  54+1  46+1  46+1  46+1  54+1  
+41  77+2  77+2  77+2  78+2  80+2  83+2  83+2  83+2  80+2  
+42   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+43  69+1  69+1  69+1  69+1  65+1  62+1  62+1  62+1  65+1  
+44  81+2  81+2  81+2  75+2  79+2  82+2  82+2  82+2  79+2  
+45  73+1  73+1  73+1  74+1  70+1  69+1  69+1  69+1  70+1  
+46  63+1  63+1  63+1  63+1  58+1  51+1  51+1  51+1  58+1  
+47  63+1  63+1  63+1  65+1  58+1  49+1  49+1  49+1  58+1  
+48  64+1  64+1  64+1  65+1  57+1  50+1  50+1  50+1  57+1  
+49  76+0  76+0  76+0  75+0  80+0  84+0  84+0  84+0  80+0  
+
+[50 rows x 104 columns]
+       sofifa_id                                         player_url  \
+15455      11728  https://sofifa.com/player/11728/barry-richards...   
+15456     211228  https://sofifa.com/player/211228/matthew-palme...   
+15457     220939  https://sofifa.com/player/220939/luke-pilling/...   
+15458     222997  https://sofifa.com/player/222997/marcus-maier/...   
+15459     214725  https://sofifa.com/player/214725/sam-ramsbotto...   
+15460     220806  https://sofifa.com/player/220806/ellis-redman/...   
+15461     225509  https://sofifa.com/player/225509/aaron-collins...   
+15462     217591  https://sofifa.com/player/217591/piotr-zemlo/1...   
+15463     222947  https://sofifa.com/player/222947/tom-davies/15...   
+15464     201197  https://sofifa.com/player/201197/paul-tisdale/...   
+
+          short_name         long_name  age         dob  height_cm  weight_kg  \
+15455  B. Richardson  Barry Richardson   44  1969-08-05        185         77   
+15456      M. Palmer    Matthew Palmer   18  1995-08-01        179         79   
+15457     L. Pilling      Luke Pilling   16  1997-07-25        180         69   
+15458       M. Maier      Marcus Maier   18  1995-12-18        174         70   
+15459  S. Ramsbottom    Sam Ramsbottom   18  1996-04-03        196         80   
+15460      E. Redman      Ellis Redman   17  1996-09-26        187         81   
+15461     A. Collins     Aaron Collins   17  1997-06-01        178         57   
+15462       P. Żemło       Piotr Żemło   18  1995-07-10        190         76   
+15463      T. Davies        Tom Davies   22  1992-04-18        180         70   
+15464     P. Tisdale      Paul Tisdale   41  1973-01-14        175         72   
+
+      nationality                      club  ...   lwb   ldm   cdm   rdm  \
+15455     England         Wycombe Wanderers  ...   NaN   NaN   NaN   NaN   
+15456     England             Burton Albion  ...  48+0  49+0  49+0  49+0   
+15457       Wales           Tranmere Rovers  ...   NaN   NaN   NaN   NaN   
+15458     Austria  FC Admira Wacker Mödling  ...  39+0  43+0  43+0  43+0   
+15459     England           Tranmere Rovers  ...   NaN   NaN   NaN   NaN   
+15460       Wales            Newport County  ...  37+0  38+0  38+0  38+0   
+15461       Wales            Newport County  ...  31+0  30+0  30+0  30+0   
+15462      Poland              Wisła Kraków  ...  48+0  46+0  46+0  46+0   
+15463     England            Fleetwood Town  ...  37+0  36+0  36+0  36+0   
+15464       Malta               Exeter City  ...  36+0  37+0  37+0  37+0   
+
+        rwb    lb   lcb    cb   rcb    rb  
+15455   NaN   NaN   NaN   NaN   NaN   NaN  
+15456  48+0  50+0  51+0  51+0  51+0  50+0  
+15457   NaN   NaN   NaN   NaN   NaN   NaN  
+15458  39+0  38+0  39+0  39+0  39+0  38+0  
+15459   NaN   NaN   NaN   NaN   NaN   NaN  
+15460  37+0  40+0  41+0  41+0  41+0  40+0  
+15461  31+0  32+0  31+0  31+0  31+0  32+0  
+15462  48+0  51+0  53+0  53+0  53+0  51+0  
+15463  37+0  39+0  40+0  40+0  40+0  39+0  
+15464  36+0  34+0  33+0  33+0  33+0  34+0  
+
+[10 rows x 104 columns]
+(15465, 104)
+----
+
+
++*In[116]:*+
+[source, ipython3]
+----
+import re
+----
+
+
++*In[117]:*+
+[source, ipython3]
+----
+fifa_clubs = df_players['club']
+S= fifa_clubs.squeeze()
+S.str.contains('^Man.*')
+----
+
+
++*Out[117]:*+
+----0        False
+1        False
+2        False
+3        False
+4        False
+         ...  
+15460    False
+15461    False
+15462    False
+15463    False
+15464    False
+Name: club, Length: 15465, dtype: bool----
+
+
++*In[118]:*+
+[source, ipython3]
+----
+df_man = fifa_clubs[S.str.contains('^Man.*')]
+----
+
+
++*In[119]:*+
+[source, ipython3]
+----
+print(df_man)
+----
+
+
++*Out[119]:*+
+----
+7        Manchester United
+10       Manchester United
+16         Manchester City
+22       Manchester United
+25         Manchester City
+               ...        
+13944       Mansfield Town
+13987       Mansfield Town
+15099       Mansfield Town
+15219       Mansfield Town
+15235    Manchester United
+Name: club, Length: 87, dtype: object
+----
+
+
++*In[120]:*+
+[source, ipython3]
+----
+df_manu = df_players[df_players['club']=='Manchester United']
+print(df_manu)
+----
+
+
++*Out[120]:*+
+----
+       sofifa_id                                         player_url  \
+7           7826  https://sofifa.com/player/7826/robin-van-persi...   
+10        167397  https://sofifa.com/player/167397/radamel-falca...   
+22        183898  https://sofifa.com/player/183898/angel-di-mari...   
+29         54050  https://sofifa.com/player/54050/wayne-rooney/1...   
+40        178088  https://sofifa.com/player/178088/juan-manuel-m...   
+66        193080  https://sofifa.com/player/193080/david-de-gea-...   
+279       167905  https://sofifa.com/player/167905/antonio-valen...   
+305       191740  https://sofifa.com/player/191740/ander-herrera...   
+307       194957  https://sofifa.com/player/194957/phil-jones/15...   
+320       190815  https://sofifa.com/player/190815/daley-blind/1...   
+328       169588  https://sofifa.com/player/169588/jonny-evans/1...   
+338       201862  https://sofifa.com/player/201862/marcos-rojo/1...   
+345       176944  https://sofifa.com/player/176944/marouane-fell...   
+353        21146  https://sofifa.com/player/21146/michael-carric...   
+496       152908  https://sofifa.com/player/152908/ashley-young/...   
+548       189681  https://sofifa.com/player/189681/rafael-pereir...   
+624       135043  https://sofifa.com/player/135043/anders-lindeg...   
+713       189881  https://sofifa.com/player/189881/chris-smallin...   
+885       208330  https://sofifa.com/player/208330/adnan-januzaj...   
+887       205988  https://sofifa.com/player/205988/luke-shaw/15/...   
+1064      138782  https://sofifa.com/player/138782/darren-fletch...   
+1596      167963  https://sofifa.com/player/167963/anderson-luis...   
+3924      207494  https://sofifa.com/player/207494/jesse-lingard...   
+6394      173531  https://sofifa.com/player/173531/ben-amos/15/1...   
+6425      206094  https://sofifa.com/player/206094/marnick-vermi...   
+7213      203265  https://sofifa.com/player/203265/tyler-blacket...   
+8103      213642  https://sofifa.com/player/213642/james-wilson/...   
+9091      206075  https://sofifa.com/player/206075/sam-johnstone...   
+10648     201911  https://sofifa.com/player/201911/will-keane/15...   
+10719     206091  https://sofifa.com/player/206091/tom-thorpe/15...   
+13214     211514  https://sofifa.com/player/211514/reece-james/1...   
+13597     208450  https://sofifa.com/player/208450/andreas-perei...   
+15235     213693  https://sofifa.com/player/213693/joe-rothwell/...   
+
+          short_name                        long_name  age         dob  \
+7      R. van Persie                 Robin van Persie   30  1983-08-06   
+10            Falcao     Radamel Falcao García Zárate   28  1986-02-10   
+22       A. Di María  Ángel Fabián Di María Hernández   26  1988-02-14   
+29         W. Rooney                Wayne Mark Rooney   28  1985-10-24   
+40         Juan Mata          Juan Manuel Mata García   26  1988-04-28   
+66            De Gea            David De Gea Quintana   23  1990-11-07   
+279      A. Valencia   Luis Antonio Valencia Mosquera   28  1985-08-04   
+305    Ander Herrera             Ander Herrera Agüera   24  1989-08-14   
+307         P. Jones                       Phil Jones   22  1992-02-21   
+320         D. Blind                      Daley Blind   24  1990-03-09   
+328         J. Evans                      Jonny Evans   26  1988-01-02   
+338          M. Rojo     Faustino Marcos Alberto Rojo   24  1990-03-20   
+345      M. Fellaini       Marouane Fellaini-Bakkioui   26  1987-11-22   
+353       M. Carrick                  Michael Carrick   32  1981-07-28   
+496         A. Young                     Ashley Young   28  1985-07-09   
+548           Rafael          Rafael Pereira da Silva   23  1990-07-09   
+624    A. Lindegaard                Anders Lindegaard   30  1984-04-13   
+713      C. Smalling                   Chris Smalling   24  1989-11-22   
+885       A. Januzaj                    Adnan Januzaj   19  1995-02-05   
+887          L. Shaw                        Luke Shaw   18  1995-07-12   
+1064     D. Fletcher                 Darren  Fletcher   30  1984-02-01   
+1596        Anderson  Anderson Luis de Abreu Oliveira   26  1988-04-13   
+3924      J. Lingard                    Jesse Lingard   21  1992-12-15   
+6394         B. Amos                        Ben  Amos   24  1990-04-10   
+6425      M. Vermijl                  Marnick Vermijl   22  1992-01-13   
+7213     T. Blackett                  Tyler  Blackett   20  1994-04-02   
+8103       J. Wilson                     James Wilson   18  1995-12-01   
+9091    S. Johnstone                    Sam Johnstone   21  1993-03-25   
+10648       W. Keane                       Will Keane   21  1993-01-11   
+10719      T. Thorpe                       Tom Thorpe   21  1993-01-13   
+13214       R. James                      Reece James   20  1993-11-07   
+13597     A. Pereira       Andreas Hoelgebaum Pereira   18  1996-01-01   
+15235    J. Rothwell                     Joe Rothwell   19  1995-01-11   
+
+       height_cm  weight_kg       nationality               club  ...   lwb  \
+7            187         71       Netherlands  Manchester United  ...  60+3   
+10           177         72          Colombia  Manchester United  ...  58+2   
+22           180         70         Argentina  Manchester United  ...  75+2   
+29           176         83           England  Manchester United  ...  65+2   
+40           174         63             Spain  Manchester United  ...  61+1   
+66           193         82             Spain  Manchester United  ...   NaN   
+279          181         78           Ecuador  Manchester United  ...  67+1   
+305          182         73             Spain  Manchester United  ...  69+0   
+307          183         71           England  Manchester United  ...  74+0   
+320          180         72       Netherlands  Manchester United  ...  76+1   
+328          189         80  Northern Ireland  Manchester United  ...  71+0   
+338          186         82         Argentina  Manchester United  ...  74+1   
+345          194         85           Belgium  Manchester United  ...  74+1   
+353          188         74           England  Manchester United  ...  75+1   
+496          175         65           England  Manchester United  ...  61+1   
+548          172         78            Brazil  Manchester United  ...  78+0   
+624          193         79           Denmark  Manchester United  ...   NaN   
+713          192         81           England  Manchester United  ...  71+0   
+885          180         75           Belgium  Manchester United  ...  52+0   
+887          185         75           England  Manchester United  ...  76+0   
+1064         184         74          Scotland  Manchester United  ...  76+0   
+1596         176         69            Brazil  Manchester United  ...  71+0   
+3924         168         65           England  Manchester United  ...  50+0   
+6394         193         76           England  Manchester United  ...   NaN   
+6425         180         76           Belgium  Manchester United  ...  65+0   
+7213         188         87           England  Manchester United  ...  62+0   
+8103         184         82           England  Manchester United  ...  45+0   
+9091         194         86           England  Manchester United  ...   NaN   
+10648        187         72           England  Manchester United  ...  46+0   
+10719        188         80           England  Manchester United  ...  54+0   
+13214        168         71           England  Manchester United  ...  58+0   
+13597        177         66           Belgium  Manchester United  ...  46+0   
+15235        185         77           England  Manchester United  ...  46+0   
+
+        ldm   cdm   rdm   rwb    lb   lcb    cb   rcb    rb  
+7      63+3  63+3  63+3  60+3  54+3  48+3  48+3  48+3  54+3  
+10     60+2  60+2  60+2  58+2  56+2  55+2  55+2  55+2  56+2  
+22     73+2  73+2  73+2  75+2  70+2  64+2  64+2  64+2  70+2  
+29     69+2  69+2  69+2  65+2  63+2  60+2  60+2  60+2  63+2  
+40     63+1  63+1  63+1  61+1  54+1  46+1  46+1  46+1  54+1  
+66      NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+279    66+1  66+1  66+1  67+1  63+1  59+1  59+1  59+1  63+1  
+305    73+0  73+0  73+0  69+0  64+0  60+0  60+0  60+0  64+0  
+307    75+0  75+0  75+0  74+0  77+0  79+0  79+0  79+0  77+0  
+320    78+1  78+1  78+1  76+1  76+1  74+1  74+1  74+1  76+1  
+328    73+0  73+0  73+0  71+0  77+0  79+0  79+0  79+0  77+0  
+338    74+1  74+1  74+1  74+1  76+1  78+1  78+1  78+1  76+1  
+345    78+1  78+1  78+1  74+1  76+1  77+1  77+1  77+1  76+1  
+353    78+1  78+1  78+1  75+1  75+1  73+1  73+1  73+1  75+1  
+496    58+1  58+1  58+1  61+1  54+1  45+1  45+1  45+1  54+1  
+548    75+0  75+0  75+0  78+0  77+0  76+0  76+0  76+0  77+0  
+624     NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+713    70+0  70+0  70+0  71+0  75+0  76+0  76+0  76+0  75+0  
+885    52+0  52+0  52+0  52+0  42+0  35+0  35+0  35+0  42+0  
+887    72+0  72+0  72+0  76+0  75+0  73+0  73+0  73+0  75+0  
+1064   79+0  79+0  79+0  76+0  79+0  80+0  80+0  80+0  79+0  
+1596   71+0  71+0  71+0  71+0  69+0  68+0  68+0  68+0  69+0  
+3924   51+0  51+0  51+0  50+0  45+0  40+0  40+0  40+0  45+0  
+6394    NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+6425   61+0  61+0  61+0  65+0  65+0  65+0  65+0  65+0  65+0  
+7213   63+0  63+0  63+0  62+0  64+0  64+0  64+0  64+0  64+0  
+8103   46+0  46+0  46+0  45+0  41+0  38+0  38+0  38+0  41+0  
+9091    NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+10648  47+0  47+0  47+0  46+0  43+0  41+0  41+0  41+0  43+0  
+10719  54+0  54+0  54+0  54+0  57+0  60+0  60+0  60+0  57+0  
+13214  51+0  51+0  51+0  58+0  56+0  53+0  53+0  53+0  56+0  
+13597  45+0  45+0  45+0  46+0  40+0  34+0  34+0  34+0  40+0  
+15235  46+0  46+0  46+0  46+0  43+0  42+0  42+0  42+0  43+0  
+
+[33 rows x 104 columns]
+----
+
+
++*In[121]:*+
+[source, ipython3]
+----
+df_manu_E = df_manu[df_manu['nationality'].str.count('^[eE].*')>0]
+print(df_manu_E)
+----
+
+
++*Out[121]:*+
+----
+       sofifa_id                                         player_url  \
+29         54050  https://sofifa.com/player/54050/wayne-rooney/1...   
+279       167905  https://sofifa.com/player/167905/antonio-valen...   
+307       194957  https://sofifa.com/player/194957/phil-jones/15...   
+353        21146  https://sofifa.com/player/21146/michael-carric...   
+496       152908  https://sofifa.com/player/152908/ashley-young/...   
+713       189881  https://sofifa.com/player/189881/chris-smallin...   
+887       205988  https://sofifa.com/player/205988/luke-shaw/15/...   
+3924      207494  https://sofifa.com/player/207494/jesse-lingard...   
+6394      173531  https://sofifa.com/player/173531/ben-amos/15/1...   
+7213      203265  https://sofifa.com/player/203265/tyler-blacket...   
+8103      213642  https://sofifa.com/player/213642/james-wilson/...   
+9091      206075  https://sofifa.com/player/206075/sam-johnstone...   
+10648     201911  https://sofifa.com/player/201911/will-keane/15...   
+10719     206091  https://sofifa.com/player/206091/tom-thorpe/15...   
+13214     211514  https://sofifa.com/player/211514/reece-james/1...   
+15235     213693  https://sofifa.com/player/213693/joe-rothwell/...   
+
+         short_name                       long_name  age         dob  \
+29        W. Rooney               Wayne Mark Rooney   28  1985-10-24   
+279     A. Valencia  Luis Antonio Valencia Mosquera   28  1985-08-04   
+307        P. Jones                      Phil Jones   22  1992-02-21   
+353      M. Carrick                 Michael Carrick   32  1981-07-28   
+496        A. Young                    Ashley Young   28  1985-07-09   
+713     C. Smalling                  Chris Smalling   24  1989-11-22   
+887         L. Shaw                       Luke Shaw   18  1995-07-12   
+3924     J. Lingard                   Jesse Lingard   21  1992-12-15   
+6394        B. Amos                       Ben  Amos   24  1990-04-10   
+7213    T. Blackett                 Tyler  Blackett   20  1994-04-02   
+8103      J. Wilson                    James Wilson   18  1995-12-01   
+9091   S. Johnstone                   Sam Johnstone   21  1993-03-25   
+10648      W. Keane                      Will Keane   21  1993-01-11   
+10719     T. Thorpe                      Tom Thorpe   21  1993-01-13   
+13214      R. James                     Reece James   20  1993-11-07   
+15235   J. Rothwell                    Joe Rothwell   19  1995-01-11   
+
+       height_cm  weight_kg nationality               club  ...   lwb   ldm  \
+29           176         83     England  Manchester United  ...  65+2  69+2   
+279          181         78     Ecuador  Manchester United  ...  67+1  66+1   
+307          183         71     England  Manchester United  ...  74+0  75+0   
+353          188         74     England  Manchester United  ...  75+1  78+1   
+496          175         65     England  Manchester United  ...  61+1  58+1   
+713          192         81     England  Manchester United  ...  71+0  70+0   
+887          185         75     England  Manchester United  ...  76+0  72+0   
+3924         168         65     England  Manchester United  ...  50+0  51+0   
+6394         193         76     England  Manchester United  ...   NaN   NaN   
+7213         188         87     England  Manchester United  ...  62+0  63+0   
+8103         184         82     England  Manchester United  ...  45+0  46+0   
+9091         194         86     England  Manchester United  ...   NaN   NaN   
+10648        187         72     England  Manchester United  ...  46+0  47+0   
+10719        188         80     England  Manchester United  ...  54+0  54+0   
+13214        168         71     England  Manchester United  ...  58+0  51+0   
+15235        185         77     England  Manchester United  ...  46+0  46+0   
+
+        cdm   rdm   rwb    lb   lcb    cb   rcb    rb  
+29     69+2  69+2  65+2  63+2  60+2  60+2  60+2  63+2  
+279    66+1  66+1  67+1  63+1  59+1  59+1  59+1  63+1  
+307    75+0  75+0  74+0  77+0  79+0  79+0  79+0  77+0  
+353    78+1  78+1  75+1  75+1  73+1  73+1  73+1  75+1  
+496    58+1  58+1  61+1  54+1  45+1  45+1  45+1  54+1  
+713    70+0  70+0  71+0  75+0  76+0  76+0  76+0  75+0  
+887    72+0  72+0  76+0  75+0  73+0  73+0  73+0  75+0  
+3924   51+0  51+0  50+0  45+0  40+0  40+0  40+0  45+0  
+6394    NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+7213   63+0  63+0  62+0  64+0  64+0  64+0  64+0  64+0  
+8103   46+0  46+0  45+0  41+0  38+0  38+0  38+0  41+0  
+9091    NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
+10648  47+0  47+0  46+0  43+0  41+0  41+0  41+0  43+0  
+10719  54+0  54+0  54+0  57+0  60+0  60+0  60+0  57+0  
+13214  51+0  51+0  58+0  56+0  53+0  53+0  53+0  56+0  
+15235  46+0  46+0  46+0  43+0  42+0  42+0  42+0  43+0  
+
+[16 rows x 104 columns]
+----
+
+
++*In[122]:*+
+[source, ipython3]
+----
+searchFor = r'Roo'
+names = df_manu_E['long_name']
+
+for i in range(df_manu_E.shape[0]):
+    playerName = names.iloc[i]
+    match = re.search(searchFor, playerName) 
+    
+    if match != None: 
+            print('Found the player: % s' % playerName)
+    
+----
+
+
++*Out[122]:*+
+----
+Found the player: Wayne Mark Rooney
+----
+
+
++*In[ ]:*+
+[source, ipython3]
+----
+
+----
